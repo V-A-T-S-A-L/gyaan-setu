@@ -6,15 +6,24 @@ import { HeroSection } from "@/components/landing/hero-section"
 import { FeatureSection } from "@/components/landing/feature-section"
 import { TestimonialSection } from "@/components/landing/testimonial-section"
 import { useTheme } from "next-themes"
-import { Moon, Sun } from "lucide-react"
+import { ChevronDown, Moon, Sun, User } from "lucide-react"
+import { AuthDialog } from "@/components/auth-dialog";
+import { useAuth } from "@/lib/auth-context"
+import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 export default function Home() {
+  const [authOpen, setAuthOpen] = useState(false)
+  const { user, logout } = useAuth()
+  const supabase = createClient();
+
   const { theme, setTheme } = useTheme()
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 px-4 border-b bg-background">
+      <header className="sticky top-0 z-40 px-8 border-b bg-background">
         <div className="container flex h-16 items-center justify-between py-4">
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-primary">Gyaan Setu</span>
@@ -43,12 +52,20 @@ export default function Home() {
               )}
             </Button>
 
-            <Link href="/login">
-              <Button variant="outline">Login</Button>
-            </Link>
-            <Link href="/register">
-              <Button>Register</Button>
-            </Link>
+            {user ? (
+              <UserMenu user={user} logout={logout} />
+            ) : (
+              <Button
+                variant="ghost"
+                className="rounded-full px-3"
+                onClick={() => setAuthOpen(true)}
+              >
+                <User className="h-5 w-5" />
+                <span className="ml-2 hidden sm:inline">Sign in</span>
+              </Button>
+            )}
+
+            <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
           </div>
         </div>
       </header>
@@ -79,3 +96,23 @@ export default function Home() {
   )
 }
 
+function UserMenu({ user, logout }: { user: any, logout: () => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="flex items-center gap-2 rounded-full px-3 hover:bg-muted">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+            <User className="h-4 w-4 text-primary" />
+          </div>
+          <ChevronDown className="h-4 w-4 opacity-60 hidden sm:block" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        <div className="px-3 py-2 text-sm font-medium text-muted-foreground">{user.email}</div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild><Link href="/profile" className="cursor-pointer">Profile</Link></DropdownMenuItem>
+        <DropdownMenuItem onClick={logout} className="cursor-pointer">Sign Out</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
