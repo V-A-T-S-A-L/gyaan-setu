@@ -72,7 +72,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push(`/?redirectTo=${pathname}`)
+      router.replace('/')
     }
   }, [user, loading, router, pathname])
 
