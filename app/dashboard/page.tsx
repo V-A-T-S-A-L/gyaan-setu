@@ -6,16 +6,100 @@ import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { CalendarDays, BookOpen, Video, Mic, BarChart3 } from "lucide-react"
-import { ProtectedRoute } from "@/lib/route-guards"
+import ProtectedRoute from "@/lib/route-guards"
 import { useAuth } from "@/lib/auth-context"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 export default function DashboardPage() {
 
     const { user, logout, loading } = useAuth()
+    const [code, setCode] = useState("")
+    const [rooms, setRooms] = useState<any[]>([])
+    const [loadingRooms, setLoading] = useState(true)
+
+    const supabase = createClient()
+
+
+    // 🔹 Fetch Rooms
+    const fetchRooms = async () => {
+        setLoading(true)
+
+        // 1. get memberships (ONLY current user due to RLS)
+        const { data: memberships, error: memError } = await supabase
+            .from("room_members")
+            .select("room_id")
+
+        if (memError) {
+            console.error("Membership fetch error:", memError)
+            setLoading(false)
+            return
+        }
+
+        if (!memberships || memberships.length === 0) {
+            setRooms([])
+            setLoading(false)
+            return
+        }
+
+        // 2. get rooms
+        const roomIds = memberships.map((m) => m.room_id)
+
+        const { data: roomsData, error: roomError } = await supabase
+            .from("rooms")
+            .select("*")
+            .in("id", roomIds)
+
+        if (roomError) {
+            console.error("Rooms fetch error:", roomError)
+            setLoading(false)
+            return
+        }
+
+        setRooms(roomsData || [])
+        setLoading(false)
+    }
+
+    useEffect(() => {
+        fetchRooms()
+    }, [])
+
+    // 🔹 Join room via code
+    const handleJoin = async () => {
+        if (!code) return
+
+        // find room by code
+        const { data: room, error } = await supabase
+            .rpc("get_room_by_code", { room_code: code })
+            .single()
+
+        if (error || !room) {
+            alert("Room not found")
+            return
+        }
+
+        if (!room) {
+            alert("Room not found")
+            return
+        }
+
+        // insert into room_members
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
+        await supabase.from("room_members").insert({
+            room_id: room.id,
+            user_id: user?.id,
+        })
+
+        setCode("")
+        fetchRooms()
+    }
+
 
     return (
-        <ProtectedRoute>
+        <ProtectedRoute allowedRole="student">
             <div className="min-h-screen bg-black text-white p-6 space-y-6">
                 {/* Header */}
                 <Card className="bg-gradient-to-r from-blue-900 to-slate-900 border-none">
@@ -97,14 +181,44 @@ export default function DashboardPage() {
                             <CardHeader>
                                 <CardTitle>Rooms</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-3">
+
+                            <CardContent className="space-y-4">
+                                {/* Join */}
                                 <div className="flex gap-2">
-                                    <Input placeholder="Enter room code..." />
-                                    <Button>Join</Button>
+                                    <Input
+                                        placeholder="Enter room code..."
+                                        value={code}
+                                        onChange={(e) => setCode(e.target.value)}
+                                    />
+                                    <Button onClick={handleJoin}>Join</Button>
                                 </div>
+
+                                {/* Joined Rooms */}
                                 <p className="text-sm text-gray-400">Joined Rooms</p>
+
+                                {loadingRooms ? (
+                                    <p>Loading...</p>
+                                ) : rooms.length === 0 ? (
+                                    <p className="text-sm text-gray-500">No rooms joined</p>
+                                ) : (
+                                    rooms.map((r) => (
+                                        <div
+                                            key={r.room_id}
+                                            className="border rounded-lg p-3"
+                                        >
+                                            <p className="font-medium">{r.name}</p>
+                                            <p className="text-sm text-gray-500">
+                                                {r.subject}
+                                            </p>
+                                            <p className="text-xs mt-1">
+                                                Code: {r.code}
+                                            </p>
+                                        </div>
+                                    ))
+                                )}
                             </CardContent>
                         </Card>
+
 
                         <Card>
                             <CardHeader>
