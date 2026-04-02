@@ -131,3 +131,23 @@ body {
     @apply font-sans;
   }
 }
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #fff;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #005eff;
+  border-radius: 5px;
+}
+
+::selection {
+    color: white;
+    background-color: #4080f7;
+}
+

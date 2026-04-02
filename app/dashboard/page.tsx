@@ -107,17 +107,17 @@ export default function DashboardPage() {
             <Header />
             <div className="min-h-screen p-6 space-y-6">
                 {/* Header */}
-                <Card className="bg-gradient-to-r from-blue-900 to-slate-900 border-none">
+                <Card className="bg-gradient-to-r from-blue-500 to-blue-800 border-none">
                     <CardContent className="flex justify-between items-center p-6">
                         <div>
-                            <h1 className="text-2xl font-semibold">Good afternoon, {user?.email}! ðŸ‘‹</h1>
+                            <h1 className="text-2xl font-semibold text-white">Good afternoon, {user?.email}</h1>
                             <p className="text-sm text-gray-300">Ready to continue your learning journey? Here's what you have today.</p>
                         </div>
 
                         <div className="flex gap-4">
                             <StatBox title="Lessons" value="3" subtitle="Today" />
-                            <StatBox title="Study time" value="60 mins" subtitle="" />
-                            <StatBox title="Weekly goal" value="82%" subtitle="" />
+                            <StatBox title="Study time" value="60 mins" subtitle="Approx" />
+                            <StatBox title="Weekly goal" value="82%" subtitle="Achieved" />
                         </div>
                     </CardContent>
                 </Card>
@@ -247,7 +247,7 @@ function StatBox({ title, value, subtitle }: any) {
     return (
         <div className="bg-black/40 px-4 py-2 rounded-xl text-center">
             <p className="text-xs text-gray-400">{title}</p>
-            <p className="font-semibold">{value}</p>
+            <p className="font-semibold text-white">{value}</p>
             {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
         </div>
     )
