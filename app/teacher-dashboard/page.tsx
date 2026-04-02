@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Plus, Users, BookOpen, Trash2, Pencil } from "lucide-react"
+import { Plus, Users, BookOpen, Trash2, Pencil, ExternalLink } from "lucide-react"
 import Head from "next/head"
 import { Header } from "@/components/header"
 import ProtectedRoute from "@/lib/route-guards"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
 
 interface Room {
     id: number
@@ -22,6 +24,7 @@ interface Room {
 
 export default function TeacherDashboard() {
     const supabase = createClient()
+    const { user } = useAuth();
 
     const [rooms, setRooms] = useState<Room[]>([])
     const [loading, setLoading] = useState(true)
@@ -29,11 +32,15 @@ export default function TeacherDashboard() {
     const [newRoom, setNewRoom] = useState({ name: "", subject: "" })
     const [editingRoom, setEditingRoom] = useState<Room | null>(null)
 
+    const router = useRouter()
+
+
     // 🔹 Fetch Rooms
     const fetchRooms = async () => {
         const { data, error } = await supabase
             .from("rooms")
             .select("*")
+            .eq("user_id", user?.id)
             .order("created_at", { ascending: false })
 
         if (!error && data) setRooms(data)
@@ -41,8 +48,10 @@ export default function TeacherDashboard() {
     }
 
     useEffect(() => {
+        if (!user?.id) return   // ⛔ prevent early call
+
         fetchRooms()
-    }, [])
+    }, [user])
 
     // 🔹 Create Room
     const handleCreateRoom = async () => {
@@ -87,8 +96,7 @@ export default function TeacherDashboard() {
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold">Teacher Dashboard 👋</h1>
-                        <p className="text-muted-foreground">Manage your classrooms</p>
+                        <h1 className="text-2xl font-bold">Manage your classrooms</h1>
                     </div>
 
                     {/* Create Room */}
@@ -175,6 +183,13 @@ export default function TeacherDashboard() {
                                     </div>
 
                                     <div className="flex gap-2">
+                                        <Button
+                                            variant="secondary"
+                                            size="icon"
+                                            onClick={() => router.push(`/teacher-classroom/${room.id}`)}
+                                        >
+                                            <ExternalLink size={16} />
+                                        </Button>
                                         {/* Edit */}
                                         <Button
                                             variant="outline"

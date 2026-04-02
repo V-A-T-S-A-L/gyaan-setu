@@ -10,6 +10,7 @@ import ProtectedRoute from "@/lib/route-guards"
 import { useAuth } from "@/lib/auth-context"
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { Header } from "@/components/header"
 
 export default function DashboardPage() {
 
@@ -29,6 +30,7 @@ export default function DashboardPage() {
         const { data: memberships, error: memError } = await supabase
             .from("room_members")
             .select("room_id")
+            .eq("user_id", user?.id)
 
         if (memError) {
             console.error("Membership fetch error:", memError)
@@ -61,8 +63,10 @@ export default function DashboardPage() {
     }
 
     useEffect(() => {
+        if (!user?.id) return   // ⛔ prevent early call
+
         fetchRooms()
-    }, [])
+    }, [user])
 
     // 🔹 Join room via code
     const handleJoin = async () => {
@@ -100,7 +104,8 @@ export default function DashboardPage() {
 
     return (
         <ProtectedRoute allowedRole="student">
-            <div className="min-h-screen bg-black text-white p-6 space-y-6">
+            <Header />
+            <div className="min-h-screen p-6 space-y-6">
                 {/* Header */}
                 <Card className="bg-gradient-to-r from-blue-900 to-slate-900 border-none">
                     <CardContent className="flex justify-between items-center p-6">

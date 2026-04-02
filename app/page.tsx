@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth-context"
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Header } from "@/components/header";
 
 
 export default function Home() {
@@ -23,7 +24,8 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 px-8 border-b bg-background">
+      <Header />
+      {/* <header className="sticky top-0 z-40 px-8 border-b bg-background">
         <div className="container flex h-16 items-center justify-between py-4">
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-primary">Gyaan Setu</span>
@@ -68,7 +70,7 @@ export default function Home() {
             <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
           </div>
         </div>
-      </header>
+      </header> */}
       <main className="flex-1">
         <HeroSection />
         <FeatureSection />

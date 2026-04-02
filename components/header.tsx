@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { User, ChevronDown, Menu } from "lucide-react"
+import { User, ChevronDown, Menu, Sun, Moon, GraduationCap } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { AuthDialog } from "./auth-dialog"
 import { useState, useEffect } from "react"
@@ -16,27 +16,30 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useTheme } from "next-themes"
 
 const NAV_ITEMS = [
-	{ name: "Rings", href: "/collections/rings" },
-	{ name: "Necklaces", href: "/collections/necklaces" },
-	{ name: "Earrings", href: "/collections/earrings" },
-	{ name: "Bracelets", href: "/collections/bracelets" },
+	{ name: "Dashboard", href: "" },
+	{ name: "Profile", href: "" },
+	{ name: "About", href: "" },
+	{ name: "Contact", href: ""}
 ]
 
-type UserRole = "admin" | "customer"
+type UserRole = "student" | "teacher"
 
 export function Header() {
 	const { user, logout } = useAuth()
 	const [authOpen, setAuthOpen] = useState(false)
 	const [isScrolled, setIsScrolled] = useState(false)
-	const [role, setRole] = useState<UserRole>("customer");
+	const [role, setRole] = useState<UserRole>("student");
 	const supabase = createClient();
 
+	const dashboardHref = role === "teacher" ? "/teacher-dashboard" : "/dashboard";
 
 	const pathname = usePathname()
 	const isAdmin = pathname.startsWith("/admin")
 
+	const { theme, setTheme } = useTheme()
 
 	useEffect(() => {
 		if (isAdmin) return
@@ -52,7 +55,7 @@ export function Header() {
 
 	useEffect(() => {
 		if (!user) {
-			setRole("customer")
+			setRole("student")
 			return
 		}
 
@@ -98,20 +101,25 @@ export function Header() {
 						{/* Logo - Kept centered or transitioned smoothly */}
 						<Link
 							href="/"
-							className="group flex flex-col leading-none text-center transition-all duration-500"
+							className="group flex leading-none text-center items-center transition-all duration-500"
 						>
-							<span className="font-serif text-2xl font-bold tracking-wide">
-								ICONIC
-							</span>
-							<span className="text-[11px] tracking-[0.25em] text-muted-foreground group-hover:text-primary transition">
-								JEWELLERY
+							<GraduationCap className="text-blue-400 mr-3" height="30" width="30"/>
+							<span className="text-blue-400 text-2xl font-bold tracking-wide">
+								Gyaan Setu
 							</span>
 						</Link>
 
 						{/* Desktop Navigation (Left side) */}
 						<nav className="hidden md:flex items-center gap-8">
 							{NAV_ITEMS.map((item) => (
-								<NavLink key={item.name} item={item} />
+								<Link
+									key={item.name}
+									href={dashboardHref} // dynamically set
+									className="relative text-sm font-medium text-foreground transition hover:text-blue-400 group"
+								>
+									{item.name}
+									<span className="absolute -bottom-1 left-0 h-[1.5px] w-0 bg-primary transition-all duration-300 group-hover:w-full" />
+								</Link>
 							))}
 						</nav>
 
@@ -135,7 +143,18 @@ export function Header() {
 								</DropdownMenu>
 							</div>
 
-							{/* Auth & Cart */}
+							<Button
+								variant="outline"
+								size="icon"
+								onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+							>
+								{theme === "dark" ? (
+									<Sun className="h-4 w-4" />
+								) : (
+									<Moon className="h-4 w-4" />
+								)}
+							</Button>
+
 							{user ? (
 								<UserMenu user={user} logout={logout} />
 							) : (
@@ -149,18 +168,35 @@ export function Header() {
 								</Button>
 							)}
 
-							{user && role === "admin" && (
+							{/* Auth & Cart
+							{user ? (
+								<UserMenu user={user} logout={logout} />
+							) : (
+								<Button
+									variant="ghost"
+									className="rounded-full px-3"
+									onClick={() => setAuthOpen(true)}
+								>
+									<User className="h-5 w-5" />
+									<span className="ml-2 hidden sm:inline">Sign in</span>
+								</Button>
+							)} */}
+
+							{/* {user && role === "admin" && (
 								<div className="ml-4">
 									<Link href="/admin" className="text-md font-bold uppercase text-primary hover:underline sm:text-sm">
 										Admin
 									</Link>
-								</div>)}
+								</div>)} */}
 						</div>
 					</div>
 				</div>
 			</header>
 
-			<AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+			<div className="flex items-center gap-4">
+
+				<AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+			</div>
 		</>
 	)
 }
@@ -192,7 +228,6 @@ function UserMenu({ user, logout }: { user: any, logout: () => void }) {
 				<div className="px-3 py-2 text-sm font-medium text-muted-foreground">{user.email}</div>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem asChild><Link href="/profile" className="cursor-pointer">Profile</Link></DropdownMenuItem>
-				<DropdownMenuItem asChild><Link href="/orders" className="cursor-pointer">Orders</Link></DropdownMenuItem>
 				<DropdownMenuItem onClick={logout} className="cursor-pointer">Sign Out</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
