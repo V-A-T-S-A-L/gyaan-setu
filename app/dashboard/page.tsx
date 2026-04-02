@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth-context"
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Header } from "@/components/header"
+import { useRouter } from "next/navigation"
 
 export default function DashboardPage() {
 
@@ -20,6 +21,7 @@ export default function DashboardPage() {
     const [loadingRooms, setLoading] = useState(true)
 
     const supabase = createClient()
+    const router = useRouter();
 
 
     // ðŸ”¹ Fetch Rooms
@@ -209,7 +211,8 @@ export default function DashboardPage() {
                                     rooms.map((r) => (
                                         <div
                                             key={r.room_id}
-                                            className="border rounded-lg p-3"
+                                            className="border cursor-pointer rounded-lg p-3"
+                                            onClick={() => {router.push(`classroom/${r.id}`)}}
                                         >
                                             <p className="font-medium">{r.name}</p>
                                             <p className="text-sm text-gray-500">
