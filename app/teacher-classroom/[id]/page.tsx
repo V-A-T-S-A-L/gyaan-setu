@@ -8,17 +8,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Search, Plus, Users, BookOpen, BarChart3 } from "lucide-react"
+import { Search, Plus, Users, BookOpen, BarChart3, ExternalLink } from "lucide-react"
 import { useParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth-context"
 import { Header } from "@/components/header"
 import ProtectedRoute from "@/lib/route-guards"
+import { useRouter } from "next/navigation"
 
 type Module = {
     id: number
     name: string
     description: string
+    created_at: string
 }
 
 type Student = {
@@ -43,6 +45,8 @@ export default function ClassroomPage() {
     const roomId = params.id as string
     const supabase = createClient()
     const { user } = useAuth()
+
+    const router = useRouter();
 
     // Fetch modules for this room
     const fetchModules = async () => {
@@ -244,9 +248,16 @@ export default function ClassroomPage() {
                                                 <CardTitle className="text-lg">{module.name}</CardTitle>
                                             </CardHeader>
                                             <CardContent className="space-y-2">
-                                                <Badge>Lessons: N/A</Badge>
-                                                <Progress value={0} /> {/* Add real progress if available */}
-                                                <Button variant="outline" className="w-full">
+                                                {/* <Badge>Lessons: N/A</Badge> */}
+                                                <p>{module.description}</p>
+                                                <Badge>{module.created_at.split("T")[0]}</Badge>
+                                                {/* <Progress value={0} /> Add real progress if available */}
+                                                <Button
+                                                    className="w-full"
+                                                    variant="secondary"
+                                                    size="icon"
+                                                    onClick={() => router.push(`/teacher-module/${module.id}`)}
+                                                >
                                                     Open Module
                                                 </Button>
                                             </CardContent>
