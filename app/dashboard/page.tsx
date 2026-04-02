@@ -22,7 +22,7 @@ export default function DashboardPage() {
     const supabase = createClient()
 
 
-    // 🔹 Fetch Rooms
+    // ðŸ”¹ Fetch Rooms
     const fetchRooms = async () => {
         setLoading(true)
 
@@ -68,7 +68,7 @@ export default function DashboardPage() {
         fetchRooms()
     }, [user])
 
-    // 🔹 Join room via code
+    // ðŸ”¹ Join room via code
     const handleJoin = async () => {
         if (!code) return
 
@@ -110,7 +110,7 @@ export default function DashboardPage() {
                 <Card className="bg-gradient-to-r from-blue-900 to-slate-900 border-none">
                     <CardContent className="flex justify-between items-center p-6">
                         <div>
-                            <h1 className="text-2xl font-semibold">Good afternoon, {user?.email}! 👋</h1>
+                            <h1 className="text-2xl font-semibold">Good afternoon, {user?.email}! ðŸ‘‹</h1>
                             <p className="text-sm text-gray-300">Ready to continue your learning journey? Here's what you have today.</p>
                         </div>
 
@@ -258,7 +258,7 @@ function ScheduleItem({ title, time, teacher, status, tag }: any) {
         <div className="flex justify-between items-center border rounded-lg p-3">
             <div>
                 <p className="font-medium">{title}</p>
-                <p className="text-xs text-gray-400">{time} • {teacher}</p>
+                <p className="text-xs text-gray-400">{time} â€¢ {teacher}</p>
             </div>
 
             <div className="flex items-center gap-3">
