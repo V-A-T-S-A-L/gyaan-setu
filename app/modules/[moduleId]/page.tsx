@@ -15,6 +15,7 @@ import InteractiveTab from "@/components/module/InteractiveTab"
 import ThreeDModelTab from "@/components/module/ThreeDModelTab"
 import QuizTab from "@/components/module/QuizTab"
 import ProtectedRoute from "@/lib/route-guards"
+import AccessibilityControls from "@/components/module/AccessibilityControls"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Doc {
@@ -497,6 +498,7 @@ export default function ModuleDetailPage() {
                 Connect to Telegram
               </button>
             </SidebarCard>
+            <AccessibilityControls />
           </div>
         </div>
       </div>
