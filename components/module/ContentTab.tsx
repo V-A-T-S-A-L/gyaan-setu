@@ -19,6 +19,7 @@ interface ContentTabProps {
   documents: Document[]
   theme: Record<string, string>
   isDark: boolean
+  command: string
 }
 
 type SubTab = "Reader" | "Document"
@@ -38,7 +39,7 @@ const charCount = (sentences: string[]) =>
   sentences.join(" ").length
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function ContentTab({ documents, theme, isDark }: ContentTabProps) {
+export default function ContentTab({ documents, theme, isDark, command }: ContentTabProps) {
 
   const [activeDocId, setActiveDocId] = useState(documents[0]?.id ?? "")
   const [subTab, setSubTab] = useState<SubTab>("Reader")
@@ -185,6 +186,35 @@ export default function ContentTab({ documents, theme, isDark }: ContentTabProps
 
   const words = wordCount(sentences)
   const chars = charCount(sentences)
+
+  useEffect(() => {
+    if (!command) return
+
+    const text = command.toLowerCase()
+
+    console.log("Command received:", text)
+
+    if (text.includes("read")) {
+      handleReadAloud()
+    }
+
+    if (text.includes("stop")) {
+      handleStop()
+    }
+
+    if (text.includes("pause")) {
+      handleReadAloud()
+    }
+
+    if (text.includes("next")) {
+      handleNext()
+    }
+
+    if (text.includes("previous")) {
+      handlePrev()
+    }
+
+  }, [command])
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
