@@ -315,8 +315,23 @@ export default function ModuleDetailPage() {
                   <ContentTab documents={contentTabDocs} theme={theme} isDark={isDark} />
                 )
               )}
-              {mainTab === "interactive" && <InteractiveTab theme={theme} />}
-              {mainTab === "3dmodels" && <ThreeDModelTab theme={theme} />}
+              {mainTab === "interactive" && (
+                docs.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "80px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                    <FileText size={48} color={theme.textMuted} />
+                    <p style={{ fontSize: 16, fontWeight: 600, color: theme.text }}>No document to chat with yet</p>
+                    <p style={{ fontSize: 13, color: theme.textMuted, maxWidth: 320 }}>
+                      Your teacher hasn't uploaded a PDF yet. Check back soon!
+                    </p>
+                  </div>
+                ) : (
+                  <InteractiveTab
+                    theme={theme}
+                    docId={docs[0].id}
+                    docTitle={docs[0].name}
+                  />
+                )
+              )}              {mainTab === "3dmodels" && <ThreeDModelTab theme={theme} />}
               {mainTab === "quiz" && <QuizTab theme={theme} moduleId={moduleId} />}
             </div>
           </div>

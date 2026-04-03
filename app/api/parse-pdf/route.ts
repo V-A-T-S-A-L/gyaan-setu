@@ -13,7 +13,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// 🔥 STRONG text cleanup
 const fixBrokenSpacing = (text: string) => {
   return text
     .replace(/-+Page.*?-+/gi, "")
@@ -26,7 +25,8 @@ const fixBrokenSpacing = (text: string) => {
 
 export async function POST(req: NextRequest) {
   try {
-    const { moduleId, filePath } = await req.json()
+    // ✅ CHANGE 1: Accept docId alongside moduleId and filePath
+    const { moduleId, filePath, docId } = await req.json()
 
     if (!moduleId || !filePath) {
       return NextResponse.json(
@@ -37,7 +37,6 @@ export async function POST(req: NextRequest) {
 
     console.log("📥 Fetching file from:", filePath)
 
-    // 🔥 1. FORCE fresh fetch using signed URL (bypasses cache)
     const { data: signedData, error: signedError } =
       await supabase.storage.from("docs").createSignedUrl(filePath, 60)
 
@@ -45,30 +44,19 @@ export async function POST(req: NextRequest) {
       throw new Error("Failed to create signed URL")
     }
 
-    const res = await fetch(signedData.signedUrl, {
-      cache: "no-store", // 🔥 critical
-    })
-
+    const res = await fetch(signedData.signedUrl, { cache: "no-store" })
     if (!res.ok) throw new Error("Failed to fetch PDF via signed URL")
 
     const buffer = Buffer.from(await res.arrayBuffer())
-
     console.log("📄 File size:", buffer.length)
 
-    // 🔥 sanity check (VERY IMPORTANT)
     if (buffer.length < 1000) {
       throw new Error("File too small — likely wrong file")
     }
 
-    // 🔥 2. unique temp file
-    const tempFilePath = path.join(
-      os.tmpdir(),
-      `${uuidv4()}-${Date.now()}.pdf`
-    )
-
+    const tempFilePath = path.join(os.tmpdir(), `${uuidv4()}-${Date.now()}.pdf`)
     await fs.writeFile(tempFilePath, buffer)
 
-    // 🔥 3. Parse PDF
     const pdfParser = new (PDFParser as any)(null, 1)
 
     const rawText: string = await new Promise((resolve, reject) => {
@@ -82,7 +70,6 @@ export async function POST(req: NextRequest) {
       pdfParser.loadPDF(tempFilePath)
     })
 
-    // 🔥 delete temp file
     await fs.unlink(tempFilePath)
 
     if (!rawText || rawText.trim().length === 0) {
@@ -91,13 +78,9 @@ export async function POST(req: NextRequest) {
 
     console.log("📝 Raw preview:", rawText.slice(0, 200))
 
-    // 🔥 4. CLEAN TEXT PROPERLY
     let cleanedText = fixBrokenSpacing(rawText)
 
-    // 🔥 5. Sentence splitting
-    const sentenceRegex =
-      /(?<!\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|e\.g|i\.e))(?<=[.?!])\s+(?=[A-Z])/g
-
+    const sentenceRegex = /(?<=[.!?])\s+(?=[A-Z])/g
     let sentences = cleanedText
       .split(sentenceRegex)
       .map((s) => s.trim())
@@ -107,7 +90,6 @@ export async function POST(req: NextRequest) {
 
     console.log("✅ Sentences:", sentences.length)
 
-    // 🔥 6. Structure JSON
     const structured = {
       meta: {
         moduleId,
@@ -117,7 +99,6 @@ export async function POST(req: NextRequest) {
       sentences: sentences.map((text, i) => ({ id: i, text })),
     }
 
-    // 🔥 7. Upload JSON
     const jsonPath = `parsed/${moduleId}.json`
 
     const { error: uploadError } = await supabase.storage
@@ -129,24 +110,25 @@ export async function POST(req: NextRequest) {
 
     if (uploadError) throw uploadError
 
-    // 🔥 8. Get public URL
     const { data: urlData } = supabase.storage
       .from("docs")
       .getPublicUrl(jsonPath)
 
     const parsedUrl = urlData?.publicUrl
 
-    // 🔥 9. Update DB
-    const { error: dbError } = await supabase
-      .from("docs")
-      .update({ parsed_url: parsedUrl })
-      .eq("module_id", moduleId)
+    // ✅ CHANGE 2: Update by docId (precise) if provided, fallback to moduleId
+    const updateQuery = supabase.from("docs").update({ parsed_url: parsedUrl })
 
-    if (dbError) throw dbError
+    if (docId) {
+      await updateQuery.eq("id", docId)
+    } else {
+      await updateQuery.eq("module_id", moduleId)
+    }
 
     return NextResponse.json({
       success: true,
       sentences: sentences.length,
+      parsedUrl,
     })
   } catch (err: any) {
     console.error("❌ PDF PARSE ERROR:", err)
