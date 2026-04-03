@@ -18,6 +18,7 @@ import ProtectedRoute from "@/lib/route-guards"
 import AccessibilityControls from "@/components/module/AccessibilityControls"
 import { Button } from "@base-ui/react"
 import { useTheme } from "next-themes"
+import { GoogleTranslate } from "@/components/google-translate"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Doc {
@@ -71,8 +72,7 @@ export default function ModuleDetailPage() {
   const [command, setComamand] = useState<string>("")
   const recognitionRef = useRef<any>(null)
   const isSpaceHeld = useRef(false)
-  const { theme, setTheme} = useTheme()
-
+  const { theme, setTheme } = useTheme()
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -225,6 +225,11 @@ export default function ModuleDetailPage() {
     sentences: [] as string[],  // ContentTab fetches/splits this itself
   }))
 
+  const languages = [
+    { label: "English", value: "en", src: "https://flagcdn.com/h60/us.png" },
+    // Add additional languages as needed
+  ];
+
   // ── Theme ────────────────────────────────────────────────────────────────
 
   const CustomToggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
@@ -314,20 +319,21 @@ export default function ModuleDetailPage() {
 
           <div className="flex items-center gap-2.5">
             <Button
-								variant="outline"
-								size="icon"
-								onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="mr-5 cursor-pointer"
-							>
-								{theme === "dark" ? (
-									<Sun className="h-4 w-4" />
-								) : (
-									<Moon className="h-4 w-4" />
-								)}
-							</Button>
-            <button className="flex items-center gap-1.5 bg-transparent border-none text-muted-foreground text-sm cursor-pointer">
+              variant="outline"
+              size="icon"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="mr-5 cursor-pointer"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </Button>
+            <GoogleTranslate />
+            {/* <button className="flex items-center gap-1.5 bg-transparent border-none text-muted-foreground text-sm cursor-pointer">
               <Globe size={15} /> English <ChevronRight size={13} />
-            </button>
+            </button> */}
             <button className="bg-transparent border border-border rounded-lg p-2 cursor-pointer flex text-muted-foreground">
               <MessageSquare size={16} />
             </button>
@@ -374,8 +380,8 @@ export default function ModuleDetailPage() {
                   key={tab.id}
                   onClick={() => setMainTab(tab.id)}
                   className={`bg-transparent border-none py-4 text-sm cursor-pointer transition-all border-b-2 ${mainTab === tab.id
-                      ? "font-semibold text-foreground border-foreground"
-                      : "font-medium text-muted-foreground border-transparent"
+                    ? "font-semibold text-foreground border-foreground"
+                    : "font-medium text-muted-foreground border-transparent"
                     }`}
                 >
                   {tab.label}
