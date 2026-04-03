@@ -151,3 +151,24 @@ body {
     background-color: #4080f7;
 }
 
+/* ================= SWITCH FIX ================= */
+
+/* Track (OFF state) */
+.high-contrast-dark [data-slot="switch"][data-unchecked],
+.high-contrast-light [data-slot="switch"][data-unchecked] {
+  background-color: hsl(var(--muted)) !important;
+  border: 2px solid hsl(var(--border)) !important;
+}
+
+/* Track (ON state) */
+.high-contrast-dark [data-slot="switch"][data-checked],
+.high-contrast-light [data-slot="switch"][data-checked] {
+  background-color: hsl(var(--primary)) !important;
+  border: 2px solid hsl(var(--border)) !important;
+}
+
+/* Thumb */
+.high-contrast-dark [data-slot="switch-thumb"],
+.high-contrast-light [data-slot="switch-thumb"] {
+  background-color: hsl(var(--foreground)) !important;
+}

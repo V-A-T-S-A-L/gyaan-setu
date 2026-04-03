@@ -17,8 +17,6 @@ interface Document {
 
 interface ContentTabProps {
   documents: Document[]
-  theme: Record<string, string>
-  isDark: boolean
   command: string
 }
 
@@ -39,7 +37,7 @@ const charCount = (sentences: string[]) =>
   sentences.join(" ").length
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function ContentTab({ documents, theme, isDark, command }: ContentTabProps) {
+export default function ContentTab({ documents, command }: ContentTabProps) {
 
   const [activeDocId, setActiveDocId] = useState(documents[0]?.id ?? "")
   const [subTab, setSubTab] = useState<SubTab>("Reader")
@@ -82,29 +80,15 @@ export default function ContentTab({ documents, theme, isDark, command }: Conten
   }, [activeDocId])
 
   const loadText = async (doc: Document) => {
-    if (!doc.parsed_url) {
-      setSentences([])
-      return
-    }
-
+    if (!doc.parsed_url) { setSentences([]); return }
     setTextLoading(true)
-
     try {
-      console.warn(doc.parsed_url)
-      const res = await fetch(`${doc.parsed_url}?t=${Date.now()}`, {
-        cache: "no-store", // prevent stale Supabase cache
-      })
-
+      const res = await fetch(`${doc.parsed_url}?t=${Date.now()}`, { cache: "no-store" })
       if (!res.ok) throw new Error("Failed to fetch parsed JSON")
-
       const json = await res.json()
-
-      // ✅ Map JSON → sentences correctly
       const extracted: string[] =
         json?.sentences?.map((s: any) => s.text).filter(Boolean) || []
-
       setSentences(extracted)
-
     } catch (err) {
       console.error(err)
       setSentences(["Could not load document text."])
@@ -168,18 +152,19 @@ export default function ContentTab({ documents, theme, isDark, command }: Conten
     if (isPlaying) speakSentence(next)
   }
 
-  // ── Shared slider style ───────────────────────────────────────────────────
-  const sliderStyle: React.CSSProperties = {
-    width: "100%", accentColor: theme.primary, cursor: "pointer", height: 4,
-  }
-
-  const labelStyle: React.CSSProperties = {
-    fontSize: 12, color: theme.textMuted, marginBottom: 6, fontWeight: 500,
-  }
+  useEffect(() => {
+    if (!command) return
+    const text = command.toLowerCase()
+    if (text.includes("read")) handleReadAloud()
+    if (text.includes("stop")) handleStop()
+    if (text.includes("pause")) handleReadAloud()
+    if (text.includes("next")) handleNext()
+    if (text.includes("previous")) handlePrev()
+  }, [command])
 
   if (!activeDoc) return (
-    <div style={{ textAlign: "center", padding: "60px 0", color: theme.textMuted }}>
-      <FileText size={40} style={{ margin: "0 auto 12px" }} />
+    <div className="text-center py-16 text-muted-foreground">
+      <FileText size={40} className="mx-auto mb-3" />
       <p>No documents available.</p>
     </div>
   )
@@ -187,51 +172,24 @@ export default function ContentTab({ documents, theme, isDark, command }: Conten
   const words = wordCount(sentences)
   const chars = charCount(sentences)
 
-  useEffect(() => {
-    if (!command) return
-
-    const text = command.toLowerCase()
-
-    console.log("Command received:", text)
-
-    if (text.includes("read")) {
-      handleReadAloud()
-    }
-
-    if (text.includes("stop")) {
-      handleStop()
-    }
-
-    if (text.includes("pause")) {
-      handleReadAloud()
-    }
-
-    if (text.includes("next")) {
-      handleNext()
-    }
-
-    if (text.includes("previous")) {
-      handlePrev()
-    }
-
-  }, [command])
-
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+    <div className="flex flex-col">
 
       {/* Document picker (multi-doc) */}
       {documents.length > 1 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12, color: theme.textMuted, fontWeight: 500 }}>Document:</span>
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <span className="text-xs text-muted-foreground font-medium">Document:</span>
           {documents.map(doc => (
-            <button key={doc.id} onClick={() => setActiveDocId(doc.id)} style={{
-              display: "flex", alignItems: "center", gap: 5, padding: "5px 12px",
-              borderRadius: 20, fontSize: 12, fontWeight: 500, cursor: "pointer",
-              background: activeDocId === doc.id ? theme.primaryMuted : "transparent",
-              border: `1px solid ${activeDocId === doc.id ? theme.primary : theme.border}`,
-              color: activeDocId === doc.id ? theme.primary : theme.textSec,
-            }}>
+            <button
+              key={doc.id}
+              onClick={() => setActiveDocId(doc.id)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium cursor-pointer border transition-colors ${
+                activeDocId === doc.id
+                  ? "bg-primary/10 border-primary text-primary"
+                  : "bg-transparent border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
               <FileText size={11} /> {doc.title}
             </button>
           ))}
@@ -239,23 +197,18 @@ export default function ContentTab({ documents, theme, isDark, command }: Conten
       )}
 
       {/* Doc title bar + metadata */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "10px 14px", background: theme.cardBg,
-        border: `1px solid ${theme.border}`, borderRadius: "8px 8px 0 0",
-        borderBottom: "none",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <FileText size={15} color="#ef4444" />
-          <span style={{ fontSize: 13, fontWeight: 600 }}>{activeDoc.title}</span>
+      <div className="flex items-center justify-between px-3.5 py-2.5 bg-card border border-border rounded-t-lg border-b-0">
+        <div className="flex items-center gap-2">
+          <FileText size={15} className="text-destructive" />
+          <span className="text-sm font-semibold text-foreground">{activeDoc.title}</span>
         </div>
         {sentences.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 11, color: theme.textMuted }}>
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             <span>{words} words</span>
-            <span style={{ color: theme.border }}>|</span>
+            <span className="text-border">|</span>
             <span>{chars} characters</span>
-            <span style={{ color: theme.border }}>|</span>
-            <span style={{ background: theme.primaryMuted, color: theme.primary, padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>
+            <span className="text-border">|</span>
+            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded font-semibold">
               Method: parsed
             </span>
           </div>
@@ -263,126 +216,114 @@ export default function ContentTab({ documents, theme, isDark, command }: Conten
       </div>
 
       {/* Sub-tab strip */}
-      <div style={{ display: "flex", border: `1px solid ${theme.border}`, borderBottom: "none" }}>
+      <div className="flex border border-border border-b-0">
         {(["Reader", "Document"] as SubTab[]).map(tab => (
-          <button key={tab} onClick={() => setSubTab(tab)} style={{
-            flex: 1, background: subTab === tab ? theme.cardBg : (isDark ? "#0f0f0f" : "#f0f0f0"),
-            border: "none", padding: "10px 0", fontSize: 13,
-            fontWeight: subTab === tab ? 600 : 400,
-            color: subTab === tab ? theme.text : theme.textMuted,
-            cursor: "pointer",
-            borderBottom: subTab === tab ? `2px solid ${theme.primary}` : `2px solid transparent`,
-            transition: "all 0.2s",
-          }}>
+          <button
+            key={tab}
+            onClick={() => setSubTab(tab)}
+            className={`flex-1 border-none py-2.5 text-sm cursor-pointer transition-all border-b-2 ${
+              subTab === tab
+                ? "bg-card font-semibold text-foreground border-primary"
+                : "bg-muted font-normal text-muted-foreground border-transparent hover:text-foreground"
+            }`}
+          >
             {tab}
           </button>
         ))}
       </div>
 
       {/* Content area */}
-      <div style={{ border: `1px solid ${theme.border}`, borderRadius: "0 0 8px 8px", background: theme.cardBg, padding: 20 }}>
+      <div className="border border-border rounded-b-lg bg-card p-5">
 
         {/* ── READER TAB ──────────────────────────────────────────────── */}
         {subTab === "Reader" && (
           <div>
             {/* Heading */}
-            <div style={{ marginBottom: 20 }}>
-              <h3 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 4px 0" }}>Text-to-Speech Reader</h3>
-              <p style={{ fontSize: 13, color: theme.textMuted, margin: 0 }}>Customize your reading experience</p>
+            <div className="mb-5">
+              <h3 className="text-lg font-bold m-0 mb-1">Text-to-Speech Reader</h3>
+              <p className="text-sm text-muted-foreground m-0">Customize your reading experience</p>
             </div>
 
             {/* Controls grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+            <div className="grid grid-cols-2 gap-5 mb-5">
 
               {/* Voice Type */}
               <div>
-                <div style={labelStyle}>Voice Type</div>
+                <div className="text-xs text-muted-foreground mb-1.5 font-medium">Voice Type</div>
                 <select
                   value={selectedVoice}
                   onChange={e => setSelectedVoice(e.target.value)}
-                  style={{
-                    width: "100%", padding: "8px 10px", borderRadius: 6, fontSize: 12,
-                    background: theme.inputBg, border: `1px solid ${theme.border}`,
-                    color: theme.text, cursor: "pointer",
-                  }}
+                  className="w-full px-2.5 py-2 rounded-md text-xs bg-background border border-border text-foreground cursor-pointer"
                 >
-                  {voices.length === 0 && (
-                    <option value="">Loading voices...</option>
-                  )}
+                  {voices.length === 0 && <option value="">Loading voices...</option>}
                   {voices.map(v => (
-                    <option key={v.name} value={v.name}>
-                      {v.name} ({v.lang})
-                    </option>
+                    <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>
                   ))}
                 </select>
               </div>
 
               {/* Reading Speed */}
               <div>
-                <div style={labelStyle}>Reading Speed</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 11, color: theme.textMuted }}>🐢</span>
+                <div className="text-xs text-muted-foreground mb-1.5 font-medium">Reading Speed</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-muted-foreground">🐢</span>
                   <input
                     type="range" min={0.5} max={2} step={0.25}
                     value={speed} onChange={e => setSpeed(Number(e.target.value))}
-                    style={sliderStyle}
+                    className="w-full accent-primary cursor-pointer h-1"
                   />
-                  <span style={{ fontSize: 11, color: theme.textMuted }}>🐇</span>
+                  <span className="text-[11px] text-muted-foreground">🐇</span>
                 </div>
-                <p style={{ fontSize: 11, color: theme.textMuted, margin: "4px 0 0" }}>Current: {speed}x</p>
+                <p className="text-[11px] text-muted-foreground mt-1 mb-0">Current: {speed}x</p>
               </div>
 
               {/* Pitch */}
               <div>
-                <div style={labelStyle}>Pitch</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 11, color: theme.textMuted }}>↓</span>
+                <div className="text-xs text-muted-foreground mb-1.5 font-medium">Pitch</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-muted-foreground">↓</span>
                   <input
                     type="range" min={0} max={2} step={0.1}
                     value={pitch} onChange={e => setPitch(Number(e.target.value))}
-                    style={sliderStyle}
+                    className="w-full accent-primary cursor-pointer h-1"
                   />
-                  <span style={{ fontSize: 11, color: theme.textMuted }}>↑</span>
+                  <span className="text-[11px] text-muted-foreground">↑</span>
                 </div>
-                <p style={{ fontSize: 11, color: theme.textMuted, margin: "4px 0 0" }}>Current: {pitch}</p>
+                <p className="text-[11px] text-muted-foreground mt-1 mb-0">Current: {pitch}</p>
               </div>
 
               {/* Volume */}
               <div>
-                <div style={labelStyle}>Volume</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Volume2 size={13} color={theme.textMuted} />
+                <div className="text-xs text-muted-foreground mb-1.5 font-medium">Volume</div>
+                <div className="flex items-center gap-2">
+                  <Volume2 size={13} className="text-muted-foreground" />
                   <input
                     type="range" min={0} max={1} step={0.1}
                     value={volume} onChange={e => setVolume(Number(e.target.value))}
-                    style={sliderStyle}
+                    className="w-full accent-primary cursor-pointer h-1"
                   />
-                  <Volume2 size={16} color={theme.textMuted} />
+                  <Volume2 size={16} className="text-muted-foreground" />
                 </div>
-                <p style={{ fontSize: 11, color: theme.textMuted, margin: "4px 0 0" }}>Current: {volume}</p>
+                <p className="text-[11px] text-muted-foreground mt-1 mb-0">Current: {volume}</p>
               </div>
             </div>
 
             {/* Read Aloud button */}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16, gap: 8 }}>
+            <div className="flex justify-end mb-4 gap-2">
               {(isPlaying || sentIdx > 0) && (
-                <button onClick={handleStop} style={{
-                  display: "flex", alignItems: "center", gap: 6, padding: "8px 16px",
-                  borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                  background: "transparent", border: `1px solid ${theme.border}`, color: theme.textSec,
-                }}>
+                <button
+                  onClick={handleStop}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-semibold cursor-pointer bg-transparent border border-border text-muted-foreground hover:text-foreground transition-colors"
+                >
                   <StopCircle size={15} /> Stop
                 </button>
               )}
               <button
                 onClick={handleReadAloud}
                 disabled={textLoading || sentences.length === 0}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6, padding: "8px 20px",
-                  borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: sentences.length ? "pointer" : "not-allowed",
-                  background: "transparent", border: `1px solid ${theme.border}`,
-                  color: theme.text, opacity: sentences.length ? 1 : 0.5,
-                }}
+                className={`flex items-center gap-1.5 px-5 py-2 rounded-md text-sm font-semibold border border-border bg-transparent text-foreground transition-colors ${
+                  sentences.length ? "cursor-pointer hover:bg-muted" : "cursor-not-allowed opacity-50"
+                }`}
               >
                 {isPlaying ? <><Pause size={15} /> Pause</> : <><Play size={15} /> Read Aloud</>}
               </button>
@@ -390,26 +331,26 @@ export default function ContentTab({ documents, theme, isDark, command }: Conten
 
             {/* Sentence navigator */}
             {sentences.length > 0 && (
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "8px 0", marginBottom: 12,
-                borderTop: `1px solid ${theme.border}`, borderBottom: `1px solid ${theme.border}`,
-              }}>
-                <button onClick={handlePrev} disabled={sentIdx === 0} style={{
-                  display: "flex", alignItems: "center", gap: 4, background: "transparent",
-                  border: "none", color: sentIdx === 0 ? theme.textMuted : theme.textSec,
-                  fontSize: 13, fontWeight: 500, cursor: sentIdx === 0 ? "not-allowed" : "pointer",
-                }}>
+              <div className="flex items-center justify-between py-2 mb-3 border-t border-b border-border">
+                <button
+                  onClick={handlePrev}
+                  disabled={sentIdx === 0}
+                  className={`flex items-center gap-1 bg-transparent border-none text-sm font-medium transition-colors ${
+                    sentIdx === 0 ? "text-muted-foreground cursor-not-allowed" : "text-foreground cursor-pointer"
+                  }`}
+                >
                   <ChevronLeft size={16} /> Previous
                 </button>
-                <span style={{ fontSize: 12, color: theme.textMuted }}>
+                <span className="text-xs text-muted-foreground">
                   Sentence {sentIdx + 1} of {sentences.length}
                 </span>
-                <button onClick={handleNext} disabled={sentIdx === sentences.length - 1} style={{
-                  display: "flex", alignItems: "center", gap: 4, background: "transparent",
-                  border: "none", color: sentIdx === sentences.length - 1 ? theme.textMuted : theme.textSec,
-                  fontSize: 13, fontWeight: 500, cursor: sentIdx === sentences.length - 1 ? "not-allowed" : "pointer",
-                }}>
+                <button
+                  onClick={handleNext}
+                  disabled={sentIdx === sentences.length - 1}
+                  className={`flex items-center gap-1 bg-transparent border-none text-sm font-medium transition-colors ${
+                    sentIdx === sentences.length - 1 ? "text-muted-foreground cursor-not-allowed" : "text-foreground cursor-pointer"
+                  }`}
+                >
                   Next <ChevronRight size={16} />
                 </button>
               </div>
@@ -417,43 +358,37 @@ export default function ContentTab({ documents, theme, isDark, command }: Conten
 
             {/* Loading */}
             {textLoading && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "40px 0", color: theme.textMuted }}>
-                <Loader2 size={20} style={{ animation: "spin 1s linear infinite" }} />
-                <span style={{ fontSize: 13 }}>Loading document text...</span>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              <div className="flex items-center justify-center gap-2.5 py-10 text-muted-foreground">
+                <Loader2 size={20} className="animate-spin" />
+                <span className="text-sm">Loading document text...</span>
               </div>
             )}
 
             {/* No text */}
             {!textLoading && sentences.length === 0 && (
-              <div style={{ textAlign: "center", padding: "40px 0", color: theme.textMuted, border: `1px dashed ${theme.border}`, borderRadius: 8 }}>
-                <FileText size={32} style={{ margin: "0 auto 8px" }} />
-                <p style={{ fontSize: 13 }}>No extracted text available for this document.</p>
-                <p style={{ fontSize: 11, marginTop: 4 }}>Switch to the "Document" tab to view the PDF directly.</p>
+              <div className="text-center py-10 text-muted-foreground border border-dashed border-border rounded-lg">
+                <FileText size={32} className="mx-auto mb-2" />
+                <p className="text-sm">No extracted text available for this document.</p>
+                <p className="text-[11px] mt-1">Switch to the "Document" tab to view the PDF directly.</p>
               </div>
             )}
 
             {/* Sentences */}
             {!textLoading && sentences.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div className="flex flex-col gap-2">
                 {sentences.map((s, i) => (
                   <div
                     key={i}
                     onClick={() => { setSentIdx(i); if (isPlaying) speakSentence(i) }}
-                    style={{
-                      padding: "14px 16px", borderRadius: 8, cursor: "pointer",
-                      transition: "all 0.2s",
-                      background: i === sentIdx
-                        ? (isDark ? "rgba(59,130,246,0.12)" : "rgba(37,99,235,0.08)")
-                        : "transparent",
-                      border: `1px solid ${i === sentIdx ? theme.primary : theme.border}`,
-                    }}
+                    className={`px-4 py-3.5 rounded-lg cursor-pointer transition-all border ${
+                      i === sentIdx
+                        ? "bg-blue-400/20 border-primary"
+                        : "bg-transparent border-border hover:bg-muted"
+                    }`}
                   >
-                    <p style={{
-                      margin: 0, fontSize: 14, lineHeight: 1.75,
-                      color: i === sentIdx ? theme.text : theme.textSec,
-                      fontWeight: i === sentIdx ? 500 : 400,
-                    }}>
+                    <p className={`m-0 text-sm leading-7 transition-colors ${
+                      i === sentIdx ? "text-foreground font-medium" : "text-muted-foreground font-normal"
+                    }`}>
                       {s}
                     </p>
                   </div>
@@ -466,18 +401,19 @@ export default function ContentTab({ documents, theme, isDark, command }: Conten
         {/* ── DOCUMENT TAB: PDF iframe ─────────────────────────────────── */}
         {subTab === "Document" && (
           activeDoc.file_url ? (
-            <div style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${theme.border}` }}>
+            <div className="rounded-lg overflow-hidden border border-border">
               <iframe
                 src={`${activeDoc.file_url}#toolbar=1&navpanes=0`}
-                style={{ width: "100%", height: "72vh", border: "none", background: "#fff" }}
+                className="w-full border-none bg-white"
+                style={{ height: "72vh" }}
                 title={activeDoc.title}
               />
             </div>
           ) : (
-            <div style={{ textAlign: "center", padding: "60px 0", color: theme.textMuted, border: `1px dashed ${theme.border}`, borderRadius: 8 }}>
-              <FileText size={40} style={{ margin: "0 auto 12px" }} />
-              <p style={{ fontSize: 14 }}>No PDF available for this document.</p>
-              <p style={{ fontSize: 12, marginTop: 6 }}>Switch to "Reader" to read the extracted text.</p>
+            <div className="text-center py-16 text-muted-foreground border border-dashed border-border rounded-lg">
+              <FileText size={40} className="mx-auto mb-3" />
+              <p className="text-sm">No PDF available for this document.</p>
+              <p className="text-xs mt-1.5">Switch to "Reader" to read the extracted text.</p>
             </div>
           )
         )}

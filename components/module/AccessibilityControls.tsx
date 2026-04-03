@@ -67,10 +67,16 @@ export default function AccessibilityControls(): JSX.Element {
     // Apply all accessibility settings
     const applyAccessibilitySettings = (settings: AccessibilityOptions): void => {
         // High contrast mode
+        const theme = localStorage.getItem("theme") // "dark" | "light"
+
+        document.documentElement.classList.remove("high-contrast-dark", "high-contrast-light")
+
         if (settings.highContrast) {
-            document.documentElement.classList.add('high-contrast-mode')
-        } else {
-            document.documentElement.classList.remove('high-contrast-mode')
+            if (theme === "dark") {
+                document.documentElement.classList.add("high-contrast-dark")
+            } else {
+                document.documentElement.classList.add("high-contrast-light")
+            }
         }
 
         // Large text
@@ -123,6 +129,14 @@ export default function AccessibilityControls(): JSX.Element {
         setOptions(defaultOptions)
     }
 
+    localStorage.getItem("theme")
+    const [theme, setTheme] = useState<"light" | "dark">("light")
+
+    useEffect(() => {
+        const stored = localStorage.getItem("theme") as "light" | "dark"
+        if (stored) setTheme(stored)
+    }, [])
+
     return (
         <>
             {/* Floating accessibility button */}
@@ -163,6 +177,7 @@ export default function AccessibilityControls(): JSX.Element {
                                     checked={options.highContrast}
                                     onCheckedChange={() => toggleOption('highContrast')}
                                     aria-label="Toggle high contrast"
+                                    className="cursor-pointer"
                                 />
                             </div>
 
@@ -179,6 +194,7 @@ export default function AccessibilityControls(): JSX.Element {
                                     checked={options.largeText}
                                     onCheckedChange={() => toggleOption('largeText')}
                                     aria-label="Toggle larger text"
+                                    className="cursor-pointer"
                                 />
                             </div>
 
@@ -195,6 +211,7 @@ export default function AccessibilityControls(): JSX.Element {
                                     checked={options.dyslexicFont}
                                     onCheckedChange={() => toggleOption('dyslexicFont')}
                                     aria-label="Toggle dyslexic font"
+                                    className="cursor-pointer"
                                 />
                             </div>
 
@@ -211,6 +228,7 @@ export default function AccessibilityControls(): JSX.Element {
                                     checked={options.reducedMotion}
                                     onCheckedChange={() => toggleOption('reducedMotion')}
                                     aria-label="Toggle reduced motion"
+                                    className="cursor-pointer"
                                 />
                             </div>
 
@@ -227,6 +245,7 @@ export default function AccessibilityControls(): JSX.Element {
                                     checked={options.highlightFocus}
                                     onCheckedChange={() => toggleOption('highlightFocus')}
                                     aria-label="Toggle focus highlighting"
+                                    className="cursor-pointer"
                                 />
                             </div>
                         </div>
@@ -246,77 +265,87 @@ export default function AccessibilityControls(): JSX.Element {
 
             {/* CSS for the accessibility features */}
             <style jsx global>{`
-        /* High Contrast Mode */
-        .high-contrast-mode {
-          --background: #000000;
-          --foreground: #ffffff;
-          --muted: #333333;
-          --muted-foreground: #f5f5f5;
-          --primary: #ffff00;
-          --primary-foreground: #000000;
-          --border: #ffffff;
-          color-scheme: dark;
-        }
-        
-        .high-contrast-mode .bg-background {
-          background-color: #000000 !important;
-        }
-        
-        .high-contrast-mode p, .high-contrast-mode h1, .high-contrast-mode h2, 
-        .high-contrast-mode h3, .high-contrast-mode span {
-          color: #ffffff !important;
-        }
-        
-        .high-contrast-mode a {
-          color: #ffff00 !important;
-          text-decoration: underline;
-        }
-        
-        .high-contrast-mode button {
-          border: 2px solid #ffffff !important;
-        }
-        
-        /* Large Text Mode */
-        .large-text-mode {
-          font-size: 120% !important;
-        }
-        
-        .large-text-mode h1 {
-          font-size: 2.5rem !important;
-        }
-        
-        .large-text-mode h2 {
-          font-size: 2rem !important;
-        }
-        
-        .large-text-mode h3 {
-          font-size: 1.75rem !important;
-        }
-        
-        .large-text-mode p, .large-text-mode span, .large-text-mode button {
-          font-size: 1.2rem !important;
-        }
-        
-        /* Dyslexic Font */
-        .dyslexic-font {
-          font-family: "OpenDyslexic", sans-serif !important;
-          letter-spacing: 0.05em;
-          word-spacing: 0.15em;
-          line-height: 1.5;
-        }
-        
-        /* Reduced Motion */
-        .reduced-motion * {
-          animation-duration: 0.001ms !important;
-          transition-duration: 0.001ms !important;
-        }
-        
-        /* Focus Highlighting */
-        .highlight-focus *:focus {
-          outline: 3px solid #ffff00 !important;
-          outline-offset: 2px !important;
-        }
-      `}</style>
+  /* ================= HIGH CONTRAST ================= */
+
+  /* DARK MODE HIGH CONTRAST */
+  .high-contrast-dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 90%;
+    --primary: 60 100% 50%;
+    --primary-foreground: 0 0% 0%;
+    --border: 0 0% 100%;
+    color-scheme: dark;
+  }
+
+  /* LIGHT MODE HIGH CONTRAST */
+  .high-contrast-light {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --muted: 0 0% 85%;
+    --muted-foreground: 0 0% 10%;
+    --primary: 240 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    --border: 0 0% 0%;
+    color-scheme: light;
+  }
+
+  /* Force better readability */
+  .high-contrast-dark a,
+  .high-contrast-light a {
+    text-decoration: underline;
+  }
+
+  .high-contrast-dark button,
+  .high-contrast-light button {
+    border-width: 2px !important;
+  }
+
+  /* ================= LARGE TEXT ================= */
+
+  .large-text-mode {
+    font-size: 120% !important;
+  }
+
+  .large-text-mode h1 {
+    font-size: 2.5rem !important;
+  }
+
+  .large-text-mode h2 {
+    font-size: 2rem !important;
+  }
+
+  .large-text-mode h3 {
+    font-size: 1.75rem !important;
+  }
+
+  .large-text-mode p,
+  .large-text-mode span,
+  .large-text-mode button {
+    font-size: 1.2rem !important;
+  }
+
+  /* ================= DYSLEXIC FONT ================= */
+
+  .dyslexic-font {
+    font-family: "OpenDyslexic", sans-serif !important;
+    letter-spacing: 0.05em;
+    word-spacing: 0.15em;
+    line-height: 1.5;
+  }
+
+  /* ================= REDUCED MOTION ================= */
+
+  .reduced-motion * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  /* ================= FOCUS ================= */
+
+  .highlight-focus *:focus { outline: 3px solid #ffff00 !important; outline-offset: 2px !important; }
+`}</style>
         </>
     )
 }
