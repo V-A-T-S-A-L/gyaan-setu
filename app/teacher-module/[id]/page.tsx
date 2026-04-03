@@ -85,7 +85,7 @@ export default function ModuleContentPage() {
 
         try {
             const fileExt = pdf.name.split(".").pop()
-            const fileName = `${moduleId}.${fileExt}`
+            const fileName = `docs/${moduleId}.${fileExt}`
 
             // 1. Upload to storage
             const { error: uploadError } = await supabase.storage
@@ -111,6 +111,17 @@ export default function ModuleContentPage() {
             if (dbError) throw dbError
 
             console.log("PDF uploaded successfully")
+
+            await fetch("/api/parse-pdf", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    moduleId,
+                    filePath: fileName,
+                }),
+            })
 
         } catch (err) {
             console.error("Upload failed:", err)
@@ -140,7 +151,7 @@ export default function ModuleContentPage() {
                                         }`}
                                 >
                                     {item}
-                                    
+
                                 </div>
                             ))}
                         </div>
