@@ -65,6 +65,101 @@ export default function ModuleDetailPage() {
   const [emotionOn, setEmotionOn] = useState(true)
   const [signLangOn, setSignLangOn] = useState(true)
   const [isListening, setIsListening] = useState(false)
+  const [command, setComamand] = useState<string>("")
+  const recognitionRef = useRef<any>(null)
+  const isSpaceHeld = useRef(false)
+
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition
+
+    if (!SpeechRecognition) {
+      console.error("Speech Recognition not supported")
+      return
+    }
+
+    const recognition = new SpeechRecognition()
+    recognition.continuous = true
+    recognition.interimResults = false
+    recognition.lang = "en-US"
+
+    recognition.onresult = (event: any) => {
+      const transcript =
+        event.results[event.results.length - 1][0].transcript
+
+      console.log("Heard:", transcript)
+      setComamand(transcript)
+
+      // 👉 later: handleCommand(transcript)
+    }
+
+    recognition.onerror = (err: any) => {
+      console.error("Speech error:", err)
+    }
+
+    recognitionRef.current = recognition
+  }, [])
+
+  useEffect(() => {
+    const isTyping = (target: EventTarget | null) => {
+      return (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target as HTMLElement)?.isContentEditable
+      )
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !isTyping(e.target)) {
+        e.preventDefault()
+        e.stopPropagation()
+
+        if (!isSpaceHeld.current) {
+          isSpaceHeld.current = true
+
+          if (recognitionRef.current && !isListening) {
+            recognitionRef.current.start()
+            setIsListening(true)
+          }
+        }
+      }
+    }
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !isTyping(e.target)) {
+        e.preventDefault()
+        e.stopPropagation()
+
+        isSpaceHeld.current = false
+
+        if (recognitionRef.current && isListening) {
+          recognitionRef.current.stop()
+          setIsListening(false)
+        }
+      }
+    }
+
+    // 🔥 attach to DOCUMENT (not window)
+    document.addEventListener("keydown", handleKeyDown, {
+      capture: true,
+      passive: false,
+    })
+
+    document.addEventListener("keyup", handleKeyUp, {
+      capture: true,
+      passive: false,
+    })
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true)
+      document.removeEventListener("keyup", handleKeyUp, true)
+    }
+  }, [isListening])
+
 
   useEffect(() => { return () => { window.speechSynthesis?.cancel() } }, [])
 
@@ -312,7 +407,7 @@ export default function ModuleDetailPage() {
                     </p>
                   </div>
                 ) : (
-                  <ContentTab documents={contentTabDocs} theme={theme} isDark={isDark} />
+                  <ContentTab documents={contentTabDocs} theme={theme} isDark={isDark} command={command} />
                 )
               )}
               {mainTab === "interactive" && <InteractiveTab theme={theme} />}
@@ -333,26 +428,49 @@ export default function ModuleDetailPage() {
             />
 
             <SidebarCard
-              iconEl={<Mic size={18} color="#3b82f6" />}
-              iconBg={isDark ? "rgba(96,165,250,0.1)" : "#bfdbfe"}
-              title="Voice Navigation"
-              desc="Navigate using voice commands"
-            >
-              <div style={{ marginTop: 16 }}>
-                <button onClick={() => setIsListening(p => !p)} style={{
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-                  padding: "10px 0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s",
-                  background: isListening ? theme.dangerMuted : "transparent",
-                  border: isListening ? `1px solid ${theme.danger}` : `1px solid ${theme.border}`,
-                  color: isListening ? theme.danger : theme.text,
-                }}>
-                  {isListening ? <><MicOff size={16} /> Stop Listening</> : <><Mic size={16} /> Start Listening</>}
-                </button>
-                <p style={{ fontSize: 12, color: theme.textMuted, textAlign: "center", marginTop: 10, fontStyle: "italic" }}>
-                  Try: "read aloud", "next page", "stop"
-                </p>
-              </div>
-            </SidebarCard>
+              iconEl={
+                isListening ? <MicOff size={18} color="#ef4444" /> : <Mic size={18} />
+              }
+              iconBg={
+                isListening
+                  ? isDark
+                    ? "rgba(239,68,68,0.1)"
+                    : "#fee2e2"
+                  : isDark
+                    ? "rgba(148,163,184,0.1)"
+                    : "#f1f5f9"
+              }
+              title="Voice Control"
+              desc={isListening ? "Listening..." : "Hold SPACE to talk"}
+              control={
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  {/* Mic Indicator */}
+                  <div
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: isListening ? "#ef4444" : theme.border,
+                      transition: "all 0.2s",
+                    }}
+                  />
+
+                  {/* Command (inline, truncated) */}
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: theme.textMuted,
+                      maxWidth: 120,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {command || "Say a command..."}
+                  </span>
+                </div>
+              }
+            />
 
             <SidebarCard
               iconEl={<Languages size={18} color="#8b5cf6" />}
