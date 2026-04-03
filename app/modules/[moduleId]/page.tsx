@@ -10,10 +10,11 @@ import {
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
-import ContentTab     from "@/components/module/ContentTab"
+import ContentTab from "@/components/module/ContentTab"
 import InteractiveTab from "@/components/module/InteractiveTab"
 import ThreeDModelTab from "@/components/module/ThreeDModelTab"
-import QuizTab        from "@/components/module/QuizTab"
+import QuizTab from "@/components/module/QuizTab"
+import ProtectedRoute from "@/lib/route-guards"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Doc {
@@ -40,29 +41,29 @@ interface Room {
 }
 
 const MAIN_TABS = [
-  { id: "content",     label: "Content"     },
+  { id: "content", label: "Content" },
   { id: "interactive", label: "Interactive" },
-  { id: "3dmodels",    label: "3D Models"   },
-  { id: "quiz",        label: "Quiz"        },
+  { id: "3dmodels", label: "3D Models" },
+  { id: "quiz", label: "Quiz" },
 ]
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function ModuleDetailPage() {
-  const params   = useParams()
-  const router   = useRouter()
+  const params = useParams()
+  const router = useRouter()
   const supabase = createClient()
   const moduleId = params?.moduleId as string
 
-  const [module,    setModule]    = useState<Module | null>(null)
-  const [room,      setRoom]      = useState<Room | null>(null)
-  const [docs,      setDocs]      = useState<Doc[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState<string | null>(null)
+  const [module, setModule] = useState<Module | null>(null)
+  const [room, setRoom] = useState<Room | null>(null)
+  const [docs, setDocs] = useState<Doc[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const [isDark,      setIsDark]      = useState(true)
-  const [mainTab,     setMainTab]     = useState("content")
-  const [emotionOn,   setEmotionOn]   = useState(true)
-  const [signLangOn,  setSignLangOn]  = useState(true)
+  const [isDark, setIsDark] = useState(true)
+  const [mainTab, setMainTab] = useState("content")
+  const [emotionOn, setEmotionOn] = useState(true)
+  const [signLangOn, setSignLangOn] = useState(true)
   const [isListening, setIsListening] = useState(false)
 
   useEffect(() => { return () => { window.speechSynthesis?.cancel() } }, [])
@@ -118,11 +119,11 @@ export default function ModuleDetailPage() {
   //   (b) raw text stored directly as a string
   // We handle both. Sentences are split client-side from the text.
   const contentTabDocs = docs.map(doc => ({
-    id:         doc.id,
-    title:      doc.name,
-    file_url:   doc.url,         // → iframe PDF viewer
+    id: doc.id,
+    title: doc.name,
+    file_url: doc.url,         // → iframe PDF viewer
     parsed_url: doc.parsed_url,  // → passed to ContentTab for text fetching
-    sentences:  [] as string[],  // ContentTab fetches/splits this itself
+    sentences: [] as string[],  // ContentTab fetches/splits this itself
   }))
 
   // ── Theme ────────────────────────────────────────────────────────────────
@@ -206,179 +207,181 @@ export default function ModuleDetailPage() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh", background: theme.appBg, color: theme.text, display: "flex", flexDirection: "column", transition: "all 0.3s ease" }}>
+    <ProtectedRoute allowedRole="student">
+      <div style={{ minHeight: "100vh", background: theme.appBg, color: theme.text, display: "flex", flexDirection: "column", transition: "all 0.3s ease" }}>
 
-      {/* TOP NAV */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "12px 24px", borderBottom: `1px solid ${theme.border}`,
-        background: theme.headerBg, position: "sticky", top: 0, zIndex: 30,
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <button onClick={() => router.back()}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: theme.textSec, cursor: "pointer", fontSize: 13, fontWeight: 500 }}>
-            <ArrowLeft size={16} /> Back
-          </button>
-          <span style={{ color: theme.border }}>|</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <BookOpen size={18} color={theme.text} />
-            <span style={{ fontSize: 15, fontWeight: 600 }}>{room?.name ?? "Classroom"}</span>
-          </div>
-          {room?.subject && (
-            <span style={{ fontSize: 12, color: theme.textMuted, background: theme.cardBg, border: `1px solid ${theme.border}`, padding: "2px 10px", borderRadius: 20 }}>
-              {room.subject}
-            </span>
-          )}
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => setIsDark(!isDark)}
-            style={{ background: "transparent", border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, cursor: "pointer", display: "flex", color: theme.textSec }}>
-            {isDark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <button style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", color: theme.textSec, fontSize: 13, cursor: "pointer" }}>
-            <Globe size={15} /> English <ChevronRight size={13} />
-          </button>
-          <button style={{ background: "transparent", border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, cursor: "pointer", display: "flex", color: theme.textSec }}>
-            <MessageSquare size={16} />
-          </button>
-          <button style={{ background: "transparent", border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, cursor: "pointer", display: "flex", color: theme.textSec }}>
-            <Video size={16} />
-          </button>
-          <button style={{ display: "flex", alignItems: "center", gap: 6, background: theme.dangerMuted, border: `1px solid ${theme.border}`, borderRadius: 6, padding: "7px 16px", color: theme.danger, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-            <LogOut size={15} /> Logout
-          </button>
-        </div>
-      </div>
-
-      {/* MODULE TITLE */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "20px 24px", borderBottom: `1px solid ${theme.border}`,
-        background: theme.headerBg,
-      }}>
-        <div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{module.name}</h2>
-          {module.description && (
-            <p style={{ fontSize: 13, color: theme.textMuted, marginTop: 4 }}>{module.description}</p>
-          )}
-          <p style={{ fontSize: 11, color: theme.textMuted, marginTop: 4 }}>
-            {docs.length} document{docs.length !== 1 ? "s" : ""} · uploaded {module.created_at.split("T")[0]}
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid ${theme.border}`, borderRadius: 6, padding: "8px 16px", color: theme.textSec, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-            <ChevronLeft size={16} /> Previous
-          </button>
-          <button style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid ${theme.border}`, borderRadius: 6, padding: "8px 16px", color: theme.textSec, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-            Next <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
-
-      {/* BODY */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-
-        {/* Content panel */}
-        <div style={{ flex: 1, overflowY: "auto", background: theme.contentBg, display: "flex", flexDirection: "column" }}>
-
-          {/* Tab strip */}
-          <div style={{ padding: "0 24px", borderBottom: `1px solid ${theme.border}`, display: "flex", gap: 32, background: theme.headerBg }}>
-            {MAIN_TABS.map(tab => (
-              <button key={tab.id} onClick={() => setMainTab(tab.id)} style={{
-                background: "none", border: "none", padding: "16px 0", fontSize: 14,
-                fontWeight: mainTab === tab.id ? 600 : 500,
-                color: mainTab === tab.id ? theme.text : theme.textMuted,
-                cursor: "pointer",
-                borderBottom: mainTab === tab.id ? `2px solid ${theme.text}` : "2px solid transparent",
-                transition: "all 0.2s",
-              }}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab content */}
-          <div style={{ padding: "32px 24px", flex: 1 }}>
-            {mainTab === "content" && (
-              docs.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "80px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                  <FileText size={48} color={theme.textMuted} />
-                  <p style={{ fontSize: 16, fontWeight: 600, color: theme.text }}>No documents yet</p>
-                  <p style={{ fontSize: 13, color: theme.textMuted, maxWidth: 320 }}>
-                    Your teacher hasn't uploaded any documents to this module yet. Check back soon!
-                  </p>
-                </div>
-              ) : (
-                <ContentTab documents={contentTabDocs} theme={theme} isDark={isDark} />
-              )
-            )}
-            {mainTab === "interactive" && <InteractiveTab theme={theme} />}
-            {mainTab === "3dmodels"    && <ThreeDModelTab theme={theme} />}
-            {mainTab === "quiz"        && <QuizTab theme={theme} moduleId={moduleId} />}
-          </div>
-        </div>
-
-        {/* SIDEBAR */}
-        <div style={{ width: 300, flexShrink: 0, borderLeft: `1px solid ${theme.border}`, background: theme.headerBg, overflowY: "auto", padding: "24px 16px" }}>
-
-          <SidebarCard
-            iconEl={<Sparkles size={18} color="#eab308" />}
-            iconBg={isDark ? "rgba(250,204,21,0.1)" : "#fef08a"}
-            title="Emotion Detection"
-            desc="Adapts content based on your emotional state"
-            control={<CustomToggle value={emotionOn} onChange={setEmotionOn} />}
-          />
-
-          <SidebarCard
-            iconEl={<Mic size={18} color="#3b82f6" />}
-            iconBg={isDark ? "rgba(96,165,250,0.1)" : "#bfdbfe"}
-            title="Voice Navigation"
-            desc="Navigate using voice commands"
-          >
-            <div style={{ marginTop: 16 }}>
-              <button onClick={() => setIsListening(p => !p)} style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
-                padding: "10px 0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s",
-                background: isListening ? theme.dangerMuted : "transparent",
-                border: isListening ? `1px solid ${theme.danger}` : `1px solid ${theme.border}`,
-                color: isListening ? theme.danger : theme.text,
-              }}>
-                {isListening ? <><MicOff size={16} /> Stop Listening</> : <><Mic size={16} /> Start Listening</>}
-              </button>
-              <p style={{ fontSize: 12, color: theme.textMuted, textAlign: "center", marginTop: 10, fontStyle: "italic" }}>
-                Try: "read aloud", "next page", "stop"
-              </p>
-            </div>
-          </SidebarCard>
-
-          <SidebarCard
-            iconEl={<Languages size={18} color="#8b5cf6" />}
-            iconBg={isDark ? "rgba(167,139,250,0.1)" : "#ddd6fe"}
-            title="Sign Language"
-            desc="Converts audio to sign language"
-            control={<CustomToggle value={signLangOn} onChange={setSignLangOn} />}
-          />
-
-          <SidebarCard
-            iconEl={<MessageSquare size={18} color="#06b6d4" />}
-            iconBg={isDark ? "rgba(34,211,238,0.1)" : "#a5f3fc"}
-            title="Telegram Bot"
-            desc="Get updates and homework reminders"
-          >
-            <button style={{
-              marginTop: 16, width: "100%", padding: "10px 0", borderRadius: 8,
-              background: "transparent", border: `1px solid ${theme.border}`,
-              color: theme.text, fontSize: 13, fontWeight: 600, cursor: "pointer",
-            }}
-              onMouseOver={e => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)")}
-              onMouseOut={e => (e.currentTarget.style.background = "transparent")}
-            >
-              Connect to Telegram
+        {/* TOP NAV */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "12px 24px", borderBottom: `1px solid ${theme.border}`,
+          background: theme.headerBg, position: "sticky", top: 0, zIndex: 30,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <button onClick={() => router.back()}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: theme.textSec, cursor: "pointer", fontSize: 13, fontWeight: 500 }}>
+              <ArrowLeft size={16} /> Back
             </button>
-          </SidebarCard>
+            <span style={{ color: theme.border }}>|</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <BookOpen size={18} color={theme.text} />
+              <span style={{ fontSize: 15, fontWeight: 600 }}>{room?.name ?? "Classroom"}</span>
+            </div>
+            {room?.subject && (
+              <span style={{ fontSize: 12, color: theme.textMuted, background: theme.cardBg, border: `1px solid ${theme.border}`, padding: "2px 10px", borderRadius: 20 }}>
+                {room.subject}
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={() => setIsDark(!isDark)}
+              style={{ background: "transparent", border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, cursor: "pointer", display: "flex", color: theme.textSec }}>
+              {isDark ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            <button style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", color: theme.textSec, fontSize: 13, cursor: "pointer" }}>
+              <Globe size={15} /> English <ChevronRight size={13} />
+            </button>
+            <button style={{ background: "transparent", border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, cursor: "pointer", display: "flex", color: theme.textSec }}>
+              <MessageSquare size={16} />
+            </button>
+            <button style={{ background: "transparent", border: `1px solid ${theme.border}`, borderRadius: 8, padding: 8, cursor: "pointer", display: "flex", color: theme.textSec }}>
+              <Video size={16} />
+            </button>
+            <button style={{ display: "flex", alignItems: "center", gap: 6, background: theme.dangerMuted, border: `1px solid ${theme.border}`, borderRadius: 6, padding: "7px 16px", color: theme.danger, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              <LogOut size={15} /> Logout
+            </button>
+          </div>
+        </div>
+
+        {/* MODULE TITLE */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "20px 24px", borderBottom: `1px solid ${theme.border}`,
+          background: theme.headerBg,
+        }}>
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{module.name}</h2>
+            {module.description && (
+              <p style={{ fontSize: 13, color: theme.textMuted, marginTop: 4 }}>{module.description}</p>
+            )}
+            <p style={{ fontSize: 11, color: theme.textMuted, marginTop: 4 }}>
+              {docs.length} document{docs.length !== 1 ? "s" : ""} · uploaded {module.created_at.split("T")[0]}
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid ${theme.border}`, borderRadius: 6, padding: "8px 16px", color: theme.textSec, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+              <ChevronLeft size={16} /> Previous
+            </button>
+            <button style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid ${theme.border}`, borderRadius: 6, padding: "8px 16px", color: theme.textSec, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+              Next <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* BODY */}
+        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+
+          {/* Content panel */}
+          <div style={{ flex: 1, overflowY: "auto", background: theme.contentBg, display: "flex", flexDirection: "column" }}>
+
+            {/* Tab strip */}
+            <div style={{ padding: "0 24px", borderBottom: `1px solid ${theme.border}`, display: "flex", gap: 32, background: theme.headerBg }}>
+              {MAIN_TABS.map(tab => (
+                <button key={tab.id} onClick={() => setMainTab(tab.id)} style={{
+                  background: "none", border: "none", padding: "16px 0", fontSize: 14,
+                  fontWeight: mainTab === tab.id ? 600 : 500,
+                  color: mainTab === tab.id ? theme.text : theme.textMuted,
+                  cursor: "pointer",
+                  borderBottom: mainTab === tab.id ? `2px solid ${theme.text}` : "2px solid transparent",
+                  transition: "all 0.2s",
+                }}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            <div style={{ padding: "32px 24px", flex: 1 }}>
+              {mainTab === "content" && (
+                docs.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "80px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                    <FileText size={48} color={theme.textMuted} />
+                    <p style={{ fontSize: 16, fontWeight: 600, color: theme.text }}>No documents yet</p>
+                    <p style={{ fontSize: 13, color: theme.textMuted, maxWidth: 320 }}>
+                      Your teacher hasn't uploaded any documents to this module yet. Check back soon!
+                    </p>
+                  </div>
+                ) : (
+                  <ContentTab documents={contentTabDocs} theme={theme} isDark={isDark} />
+                )
+              )}
+              {mainTab === "interactive" && <InteractiveTab theme={theme} />}
+              {mainTab === "3dmodels" && <ThreeDModelTab theme={theme} />}
+              {mainTab === "quiz" && <QuizTab theme={theme} moduleId={moduleId} />}
+            </div>
+          </div>
+
+          {/* SIDEBAR */}
+          <div style={{ width: 300, flexShrink: 0, borderLeft: `1px solid ${theme.border}`, background: theme.headerBg, overflowY: "auto", padding: "24px 16px" }}>
+
+            <SidebarCard
+              iconEl={<Sparkles size={18} color="#eab308" />}
+              iconBg={isDark ? "rgba(250,204,21,0.1)" : "#fef08a"}
+              title="Emotion Detection"
+              desc="Adapts content based on your emotional state"
+              control={<CustomToggle value={emotionOn} onChange={setEmotionOn} />}
+            />
+
+            <SidebarCard
+              iconEl={<Mic size={18} color="#3b82f6" />}
+              iconBg={isDark ? "rgba(96,165,250,0.1)" : "#bfdbfe"}
+              title="Voice Navigation"
+              desc="Navigate using voice commands"
+            >
+              <div style={{ marginTop: 16 }}>
+                <button onClick={() => setIsListening(p => !p)} style={{
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%",
+                  padding: "10px 0", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all 0.2s",
+                  background: isListening ? theme.dangerMuted : "transparent",
+                  border: isListening ? `1px solid ${theme.danger}` : `1px solid ${theme.border}`,
+                  color: isListening ? theme.danger : theme.text,
+                }}>
+                  {isListening ? <><MicOff size={16} /> Stop Listening</> : <><Mic size={16} /> Start Listening</>}
+                </button>
+                <p style={{ fontSize: 12, color: theme.textMuted, textAlign: "center", marginTop: 10, fontStyle: "italic" }}>
+                  Try: "read aloud", "next page", "stop"
+                </p>
+              </div>
+            </SidebarCard>
+
+            <SidebarCard
+              iconEl={<Languages size={18} color="#8b5cf6" />}
+              iconBg={isDark ? "rgba(167,139,250,0.1)" : "#ddd6fe"}
+              title="Sign Language"
+              desc="Converts audio to sign language"
+              control={<CustomToggle value={signLangOn} onChange={setSignLangOn} />}
+            />
+
+            <SidebarCard
+              iconEl={<MessageSquare size={18} color="#06b6d4" />}
+              iconBg={isDark ? "rgba(34,211,238,0.1)" : "#a5f3fc"}
+              title="Telegram Bot"
+              desc="Get updates and homework reminders"
+            >
+              <button style={{
+                marginTop: 16, width: "100%", padding: "10px 0", borderRadius: 8,
+                background: "transparent", border: `1px solid ${theme.border}`,
+                color: theme.text, fontSize: 13, fontWeight: 600, cursor: "pointer",
+              }}
+                onMouseOver={e => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)")}
+                onMouseOut={e => (e.currentTarget.style.background = "transparent")}
+              >
+                Connect to Telegram
+              </button>
+            </SidebarCard>
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   )
 }

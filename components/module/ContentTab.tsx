@@ -40,18 +40,18 @@ const charCount = (sentences: string[]) =>
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function ContentTab({ documents, theme, isDark }: ContentTabProps) {
 
-  const [activeDocId,  setActiveDocId]  = useState(documents[0]?.id ?? "")
-  const [subTab,       setSubTab]       = useState<SubTab>("Reader")
-  const [sentences,    setSentences]    = useState<string[]>([])
-  const [textLoading,  setTextLoading]  = useState(false)
+  const [activeDocId, setActiveDocId] = useState(documents[0]?.id ?? "")
+  const [subTab, setSubTab] = useState<SubTab>("Reader")
+  const [sentences, setSentences] = useState<string[]>([])
+  const [textLoading, setTextLoading] = useState(false)
 
   // TTS controls
-  const [isPlaying,    setIsPlaying]    = useState(false)
-  const [sentIdx,      setSentIdx]      = useState(0)
-  const [speed,        setSpeed]        = useState(1)
-  const [pitch,        setPitch]        = useState(1)
-  const [volume,       setVolume]       = useState(1)
-  const [voices,       setVoices]       = useState<SpeechSynthesisVoice[]>([])
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [sentIdx, setSentIdx] = useState(0)
+  const [speed, setSpeed] = useState(1)
+  const [pitch, setPitch] = useState(1)
+  const [volume, setVolume] = useState(1)
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
   const [selectedVoice, setSelectedVoice] = useState<string>("")
 
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null)
@@ -81,17 +81,34 @@ export default function ContentTab({ documents, theme, isDark }: ContentTabProps
   }, [activeDocId])
 
   const loadText = async (doc: Document) => {
-    if (!doc.parsed_url) { setSentences([]); return }
-    if (isUrl(doc.parsed_url)) {
-      setTextLoading(true)
-      try {
-        const res  = await fetch(doc.parsed_url)
-        const text = await res.text()
-        setSentences(splitSentences(text))
-      } catch { setSentences(["Could not load document text."]) }
-      finally  { setTextLoading(false) }
-    } else {
-      setSentences(splitSentences(doc.parsed_url))
+    if (!doc.parsed_url) {
+      setSentences([])
+      return
+    }
+
+    setTextLoading(true)
+
+    try {
+      console.warn(doc.parsed_url)
+      const res = await fetch(`${doc.parsed_url}?t=${Date.now()}`, {
+        cache: "no-store", // prevent stale Supabase cache
+      })
+
+      if (!res.ok) throw new Error("Failed to fetch parsed JSON")
+
+      const json = await res.json()
+
+      // ✅ Map JSON → sentences correctly
+      const extracted: string[] =
+        json?.sentences?.map((s: any) => s.text).filter(Boolean) || []
+
+      setSentences(extracted)
+
+    } catch (err) {
+      console.error(err)
+      setSentences(["Could not load document text."])
+    } finally {
+      setTextLoading(false)
     }
   }
 
@@ -99,12 +116,12 @@ export default function ContentTab({ documents, theme, isDark }: ContentTabProps
   const speakSentence = (idx: number) => {
     if (!sentences[idx]) return
     window.speechSynthesis.cancel()
-    const utt    = new SpeechSynthesisUtterance(sentences[idx])
-    utt.rate     = speed
-    utt.pitch    = pitch
-    utt.volume   = volume
-    utt.lang     = "en-US"
-    const voice  = voices.find(v => v.name === selectedVoice)
+    const utt = new SpeechSynthesisUtterance(sentences[idx])
+    utt.rate = speed
+    utt.pitch = pitch
+    utt.volume = volume
+    utt.lang = "en-US"
+    const voice = voices.find(v => v.name === selectedVoice)
     if (voice) utt.voice = voice
     utt.onend = () => {
       if (idx + 1 < sentences.length) {
