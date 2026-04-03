@@ -8,13 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Search, Plus, Users, BookOpen, BarChart3, ExternalLink } from "lucide-react"
+import { Search, Plus, Users, BookOpen, BarChart3, ExternalLink, MessageSquare, Video } from "lucide-react"
 import { useParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth-context"
 import { Header } from "@/components/header"
 import ProtectedRoute from "@/lib/route-guards"
 import { useRouter } from "next/navigation"
+import VideoCall from "@/components/VideoCall"
 
 type Module = {
     id: number
@@ -34,6 +35,7 @@ export default function ClassroomPage() {
     const [modules, setModules] = useState<Module[]>([])
     const [students, setStudents] = useState<Student[]>([])
     const [loading, setLoading] = useState(true)
+    const [showVideo, setShowVideo] = useState(false)
 
     // New module state
     const [showCreate, setShowCreate] = useState(false)
@@ -146,12 +148,20 @@ export default function ClassroomPage() {
                         <p className="text-muted-foreground">Manage modules, students, and analytics</p>
                     </div>
                     {/** Show create button only if teacher/owner (RLS will enforce) */}
-                    <Button
-                        className="flex items-center gap-2"
-                        onClick={() => setShowCreate((prev) => !prev)}
-                    >
-                        <Plus className="w-4 h-4" /> {showCreate ? "Cancel" : "Create Module"}
-                    </Button>
+                    <div className="flex gap-5">
+                        <Button
+                            className="flex items-center gap-2"
+                            onClick={() => setShowCreate((prev) => !prev)}
+                        >
+                            <Plus className="w-4 h-4" /> {showCreate ? "Cancel" : "Create Module"}
+                        </Button>
+                        <button className="bg-transparent border border-border rounded-lg p-2 cursor-pointer flex text-muted-foreground">
+                            <MessageSquare size={16} />
+                        </button>
+                        <button onClick={() => setShowVideo(true)} className="bg-transparent border border-border rounded-lg p-2 cursor-pointer flex text-muted-foreground">
+                            <Video size={16} />
+                        </button>
+                    </div>
                 </div>
 
                 {showCreate && (
@@ -179,6 +189,9 @@ export default function ClassroomPage() {
                         </CardContent>
                     </Card>
                 )}
+
+                {showVideo && <VideoCall userId={user?.id} onClose={() => setShowVideo(false)} />}
+
 
                 {/* KPI Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

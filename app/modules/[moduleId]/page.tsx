@@ -19,6 +19,8 @@ import AccessibilityControls from "@/components/module/AccessibilityControls"
 import { Button } from "@base-ui/react"
 import { useTheme } from "next-themes"
 import { GoogleTranslate } from "@/components/google-translate"
+import VideoCall from "@/components/VideoCall"
+import { useAuth } from "@/lib/auth-context"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Doc {
@@ -57,12 +59,16 @@ export default function ModuleDetailPage() {
   const router = useRouter()
   const supabase = createClient()
   const moduleId = params?.moduleId as string
+  const { user } = useAuth()
 
   const [module, setModule] = useState<Module | null>(null)
   const [room, setRoom] = useState<Room | null>(null)
   const [docs, setDocs] = useState<Doc[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [showVideo, setShowVideo] = useState(false)
+
 
   const [isDark, setIsDark] = useState(true)
   const [mainTab, setMainTab] = useState("content")
@@ -337,7 +343,7 @@ export default function ModuleDetailPage() {
             <button className="bg-transparent border border-border rounded-lg p-2 cursor-pointer flex text-muted-foreground">
               <MessageSquare size={16} />
             </button>
-            <button className="bg-transparent border border-border rounded-lg p-2 cursor-pointer flex text-muted-foreground">
+            <button onClick={() => setShowVideo(true)} className="bg-transparent border border-border rounded-lg p-2 cursor-pointer flex text-muted-foreground">
               <Video size={16} />
             </button>
             <button className="flex items-center gap-1.5 bg-destructive/10 border border-border rounded-md px-4 py-[7px] text-destructive text-sm font-semibold cursor-pointer">
@@ -427,6 +433,9 @@ export default function ModuleDetailPage() {
 
           {/* SIDEBAR */}
           <div className="w-[300px] flex-shrink-0 border-l border-border bg-card overflow-y-auto px-4 py-6">
+
+            {showVideo && <VideoCall userId={user?.id} onClose={() => setShowVideo(false)} />}
+
 
             <SidebarCard
               iconEl={<Sparkles size={18} color="#eab308" />}
