@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mic, MicOff, Video, VideoOff, X, PhoneOff, Copy, Phone, Subtitles } from "lucide-react"
+import { Mic, MicOff, Video, VideoOff, X, PhoneOff, Copy, Phone, Subtitles, Maximize2, Minimize2 } from "lucide-react"
 import { io, Socket } from "socket.io-client"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -116,6 +116,14 @@ export function VideoCall({ onClose, userId }: VideoCallProps) {
   const [showAlert, setShowAlert] = useState(false)
   const [alertMessage, setAlertMessage] = useState({ title: "", description: "" })
   const [connectionState, setConnectionState] = useState<string>("")
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  const [position, setPosition] = useState({ x: 100, y: 80 })
+  const [size, setSize] = useState({ width: 400, height: 570 })
+
+  const dragRef = useRef<HTMLDivElement | null>(null)
+  const isDragging = useRef(false)
+  const offset = useRef({ x: 0, y: 0 })
 
   // Subtitle related states
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false)
@@ -128,6 +136,66 @@ export function VideoCall({ onClose, userId }: VideoCallProps) {
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
   const socketRef = useRef<Socket | null>(null)
   const speechRecognitionRef = useRef<SpeechRecognitionService | null>(null)
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isFullscreen) return
+    isDragging.current = true
+    offset.current = {
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    }
+  }
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging.current) return
+    setPosition({
+      x: e.clientX - offset.current.x,
+      y: e.clientY - offset.current.y,
+    })
+  }
+
+  const handleMouseUp = () => {
+    isDragging.current = false
+  }
+
+  useEffect(() => {
+    window.addEventListener("mousemove", handleMouseMove)
+    window.addEventListener("mouseup", handleMouseUp)
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove)
+      window.removeEventListener("mouseup", handleMouseUp)
+    }
+  }, [])
+
+  const isResizing = useRef(false)
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    if (!isFullscreen) return
+    e.stopPropagation()
+    isResizing.current = true
+  }
+
+  const handleResizeMove = (e: MouseEvent) => {
+    if (!isResizing.current) return
+
+    setSize({
+      width: Math.max(500, e.clientX - position.x),
+      height: Math.max(400, e.clientY - position.y),
+    })
+  }
+
+  const handleResizeUp = () => {
+    isResizing.current = false
+  }
+
+  useEffect(() => {
+    window.addEventListener("mousemove", handleResizeMove)
+    window.addEventListener("mouseup", handleResizeUp)
+    return () => {
+      window.removeEventListener("mousemove", handleResizeMove)
+      window.removeEventListener("mouseup", handleResizeUp)
+    }
+  }, [position])
 
   // Initialize socket connection and local stream
   useEffect(() => {
@@ -629,250 +697,289 @@ export function VideoCall({ onClose, userId }: VideoCallProps) {
   };
 
   return (
-    <Card className="w-full max-w-lg">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">1-on-1 Video Call</CardTitle>
-          <Button variant="ghost" size="sm" onClick={handleClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {connectionError && (
-          <div className="mb-3 p-2 bg-red-100 text-red-800 rounded-md text-sm">
-            {connectionError}
+    <div
+      style={
+        isFullscreen
+          ? {
+            position: "fixed",
+            top: position.y,
+            left: position.x,
+            width: size.width,
+            height: size.height,
+            zIndex: 999,
+          }
+          : {}
+      }
+      className={isFullscreen ? "fixed z-50" : ""}
+    >
+      <Card className="w-full h-full flex flex-col relative">
+        <CardHeader className="pb-2">
+          <div
+            className={`flex items-center justify-between ${isFullscreen ? "cursor-move" : ""
+              }`}
+            onMouseDown={handleMouseDown}
+          >
+            <CardTitle className="text-lg">1-on-1 Video Call</CardTitle>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsFullscreen((prev) => !prev)}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="h-4 w-4" />
+                ) : (
+                  <Maximize2 className="h-4 w-4" />
+                )}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        )}
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col overflow-hidden">
+          {connectionError && (
+            <div className="mb-3 p-2 bg-red-100 text-red-800 rounded-md text-sm">
+              {connectionError}
+            </div>
+          )}
 
-        {connectionState && (
-          <div className="mb-2 text-xs text-muted-foreground">
-            Connection state: {connectionState}
-          </div>
-        )}
+          {connectionState && (
+            <div className="mb-2 text-xs text-muted-foreground">
+              Connection state: {connectionState}
+            </div>
+          )}
 
-        {/* Call Setup UI */}
-        {showCallSetup && !isCallActive && (
-          <div className="mb-4">
-            <Tabs defaultValue="create">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="create">Create Call</TabsTrigger>
-                <TabsTrigger value="join">Join Call</TabsTrigger>
-              </TabsList>
+          {/* Call Setup UI */}
+          {showCallSetup && !isCallActive && (
+            <div className="mb-4">
+              <Tabs defaultValue="create">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="create">Create Call</TabsTrigger>
+                  <TabsTrigger value="join">Join Call</TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="create" className="mt-2">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={currentRoomId}
-                      readOnly
-                      className="flex-1"
-                      onClick={(e) => e.currentTarget.select()}
-                    />
+                <TabsContent value="create" className="mt-2">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={currentRoomId}
+                        readOnly
+                        className="flex-1"
+                        onClick={(e) => e.currentTarget.select()}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={copyRoomId}
+                      >
+                        {copySuccess ? "Copied!" : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Share this Room ID with someone to join your call.
+                    </div>
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={copyRoomId}
+                      className="w-full"
+                      onClick={startCall}
+                      disabled={isWaiting}
                     >
-                      {copySuccess ? "Copied!" : <Copy className="h-4 w-4" />}
+                      {isWaiting ? (
+                        <>
+                          <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
+                          Waiting for participant...
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="h-4 w-4 mr-2" />
+                          Start Call
+                        </>
+                      )}
                     </Button>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    Share this Room ID with someone to join your call.
+                </TabsContent>
+
+                <TabsContent value="join" className="mt-2">
+                  <div className="space-y-4">
+                    <div>
+                      <Input
+                        placeholder="Enter Room ID to join"
+                        value={joinRoomId}
+                        onChange={(e) => setJoinRoomId(e.target.value)}
+                      />
+                    </div>
+                    <Button
+                      className="w-full"
+                      onClick={joinCall}
+                      disabled={isWaiting}
+                    >
+                      {isWaiting ? (
+                        <>
+                          <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
+                          Joining call...
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="h-4 w-4 mr-2" />
+                          Join Call
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <Button
-                    className="w-full"
-                    onClick={startCall}
-                    disabled={isWaiting}
-                  >
-                    {isWaiting ? (
-                      <>
-                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
-                        Waiting for participant...
-                      </>
-                    ) : (
-                      <>
-                        <Phone className="h-4 w-4 mr-2" />
-                        Start Call
-                      </>
-                    )}
-                  </Button>
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+
+          {/* Video display */}
+          <div className="grid grid-cols-1 gap-2 mb-3">
+            {isCallActive ? (
+              <div className="relative">
+                {/* Main remote video */}
+                <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay={true}
+                    playsInline={true}
+                    className="w-full h-full object-cover"
+                  />
+
+                  {/* Remote subtitles overlay */}
+                  {subtitlesEnabled && remoteTranscript && (
+                    <div className="absolute bottom-16 left-0 right-0 p-2 bg-black bg-opacity-50 text-white text-center">
+                      {remoteTranscript}
+                    </div>
+                  )}
                 </div>
-              </TabsContent>
 
-              <TabsContent value="join" className="mt-2">
-                <div className="space-y-4">
-                  <div>
-                    <Input
-                      placeholder="Enter Room ID to join"
-                      value={joinRoomId}
-                      onChange={(e) => setJoinRoomId(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    className="w-full"
-                    onClick={joinCall}
-                    disabled={isWaiting}
-                  >
-                    {isWaiting ? (
-                      <>
-                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-t-transparent border-white rounded-full"></div>
-                        Joining call...
-                      </>
-                    ) : (
-                      <>
-                        <Phone className="h-4 w-4 mr-2" />
-                        Join Call
-                      </>
-                    )}
-                  </Button>
+                {/* PiP local video */}
+                <div className="absolute bottom-2 right-2 w-1/4 aspect-video bg-muted rounded-lg overflow-hidden border-2 border-background shadow-md">
+                  <video
+                    ref={localVideoRef}
+                    autoPlay={true}
+                    playsInline={true}
+                    muted={true}
+                    className="w-full h-full object-cover"
+                  />
+
                 </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        )}
-
-        {/* Video display */}
-        <div className="grid grid-cols-1 gap-2 mb-3">
-          {isCallActive ? (
-            <div className="relative">
-              {/* Main remote video */}
-              <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay={true}
-                  playsInline={true}
-                  className="w-full h-full object-cover"
-                />
-
-                {/* Remote subtitles overlay */}
-                {subtitlesEnabled && remoteTranscript && (
-                  <div className="absolute bottom-16 left-0 right-0 p-2 bg-black bg-opacity-50 text-white text-center">
-                    {remoteTranscript}
+                {/* Local subtitles overlay - smaller version */}
+                {subtitlesEnabled && localTranscript && (
+                  <div className="absolute bottom-0 left-0 right-0 p-1 bg-black bg-opacity-50 text-white text-xs text-center truncate">
+                    {localTranscript}
                   </div>
                 )}
               </div>
-
-              {/* PiP local video */}
-              <div className="absolute bottom-2 right-2 w-1/4 aspect-video bg-muted rounded-lg overflow-hidden border-2 border-background shadow-md">
-                <video
-                  ref={localVideoRef}
-                  autoPlay={true}
-                  playsInline={true}
-                  muted={true}
-                  className="w-full h-full object-cover"
-                />
-
-              </div>
-              {/* Local subtitles overlay - smaller version */}
-              {subtitlesEnabled && localTranscript && (
-                <div className="absolute bottom-0 left-0 right-0 p-1 bg-black bg-opacity-50 text-white text-xs text-center truncate">
-                  {localTranscript}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-              {isWaiting ? (
-                <div className="flex items-center justify-center h-full flex-col gap-2">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-                  <div className="text-sm text-muted-foreground">
-                    {joinRoomId ? "Joining call..." : "Waiting for someone to join..."}
+            ) : (
+              <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+                {isWaiting ? (
+                  <div className="flex items-center justify-center h-full flex-col gap-2">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                    <div className="text-sm text-muted-foreground">
+                      {joinRoomId ? "Joining call..." : "Waiting for someone to join..."}
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <video
-                  ref={localVideoRef}
-                  autoPlay={true}
-                  playsInline={true}
-                  muted={true}
-                  className="w-full h-full object-cover"
-                />
-              )}
+                ) : (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay={true}
+                    playsInline={true}
+                    muted={true}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Subtitles toggle */}
+          {isCallActive && isSubtitlesSupported && (
+            <div className="flex items-center justify-between mb-3 p-2 bg-muted rounded-md">
+              <div className="flex items-center space-x-2">
+                <Subtitles className="h-4 w-4" />
+                <Label htmlFor="subtitle-toggle">Live Subtitles</Label>
+              </div>
+              <Switch
+                id="subtitle-toggle"
+                checked={subtitlesEnabled}
+                onCheckedChange={toggleSubtitles}
+              />
             </div>
           )}
-        </div>
 
-        {/* Subtitles toggle */}
-        {isCallActive && isSubtitlesSupported && (
-          <div className="flex items-center justify-between mb-3 p-2 bg-muted rounded-md">
-            <div className="flex items-center space-x-2">
-              <Subtitles className="h-4 w-4" />
-              <Label htmlFor="subtitle-toggle">Live Subtitles</Label>
-            </div>
-            <Switch
-              id="subtitle-toggle"
-              checked={subtitlesEnabled}
-              onCheckedChange={toggleSubtitles}
-            />
+          {/* Call controls */}
+          <div className="flex justify-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleMute}
+            >
+              {isMuted ? (
+                <MicOff className="h-4 w-4 mr-1" />
+              ) : (
+                <Mic className="h-4 w-4 mr-1" />
+              )}
+              {isMuted ? "Unmute" : "Mute"}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleCamera}
+            >
+              {isCameraOff ? (
+                <VideoOff className="h-4 w-4 mr-1" />
+              ) : (
+                <Video className="h-4 w-4 mr-1" />
+              )}
+              {isCameraOff ? "Start Video" : "Stop Video"}
+            </Button>
+
+            {isCallActive || isWaiting ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={endCall}
+              >
+                <PhoneOff className="h-4 w-4 mr-1" />
+                End Call
+              </Button>
+            ) : !showCallSetup ? (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setShowCallSetup(true)}
+              >
+                <Phone className="h-4 w-4 mr-1" />
+                New Call
+              </Button>
+            ) : null}
           </div>
+        </CardContent>
+
+        {/* Alerts */}
+        <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{alertMessage.title}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {alertMessage.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction>OK</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        {isFullscreen && (
+          <div
+            onMouseDown={handleResizeMouseDown}
+            className="absolute bottom-1 right-1 w-4 h-4 cursor-se-resize"
+          />
         )}
-
-        {/* Call controls */}
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleMute}
-          >
-            {isMuted ? (
-              <MicOff className="h-4 w-4 mr-1" />
-            ) : (
-              <Mic className="h-4 w-4 mr-1" />
-            )}
-            {isMuted ? "Unmute" : "Mute"}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleCamera}
-          >
-            {isCameraOff ? (
-              <VideoOff className="h-4 w-4 mr-1" />
-            ) : (
-              <Video className="h-4 w-4 mr-1" />
-            )}
-            {isCameraOff ? "Start Video" : "Stop Video"}
-          </Button>
-
-          {isCallActive || isWaiting ? (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={endCall}
-            >
-              <PhoneOff className="h-4 w-4 mr-1" />
-              End Call
-            </Button>
-          ) : !showCallSetup ? (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => setShowCallSetup(true)}
-            >
-              <Phone className="h-4 w-4 mr-1" />
-              New Call
-            </Button>
-          ) : null}
-        </div>
-      </CardContent>
-
-      {/* Alerts */}
-      <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{alertMessage.title}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {alertMessage.description}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction>OK</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
+      </Card>
+    </div>
   )
 }
 
